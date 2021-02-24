@@ -132,11 +132,11 @@ class handler(requestsManager.asyncRequestHandler):
 					# Create oppai instance
 					log.debug("Specific request ({}%/{}). Calculating pp with oppai...".format(accuracy, modsEnum))
 					if gameMode == gameModes.STD and (modsEnum&mods.RELAX):
-						oppai = relaxoppai.oppai(bmap, mods=modsEnum, tillerino=True)
+						oppai = relaxoppai.oppai(bmap, mods=modsEnum, tillerino=False)
 					elif gameMode == gameModes.STD and (modsEnum&mods.RELAX2):
-						oppai = autoppai.oppai(bmap, mods=modsEnum, tillerino=True)
+						oppai = autoppai.oppai(bmap, mods=modsEnum, tillerino=False)
 					else:
-						oppai = rippoppai.oppai(bmap, mods=modsEnum, tillerino=True)
+						oppai = rippoppai.oppai(bmap, mods=modsEnum, tillerino=False)
 					bmap.starsStd = oppai.stars
 					if accuracy is not None:
 						returnPP = calculatePPFromAcc(oppai, accuracy)
@@ -148,7 +148,7 @@ class handler(requestsManager.asyncRequestHandler):
 			# Data to return
 			data = {
 				"song_name": bmap.songName,
-				"pp": [x for x in returnPP] if type(returnPP) is list else returnPP,
+				"pp": returnPP,
 				"length": bmap.hitLength,
 				"stars": bmap.starsStd,
 				"ar": bmap.AR,
