@@ -139,9 +139,9 @@ class handler(requestsManager.asyncRequestHandler):
 						oppai = rippoppai.oppai(bmap, mods=modsEnum, tillerino=False)
 					bmap.starsStd = oppai.stars
 					if accuracy is not None:
-						returnPP = calculatePPFromAcc(oppai, accuracy)
+						returnPP = [calculatePPFromAcc(oppai, accuracy)]
 					else:
-						returnPP = oppai.pp
+						returnPP = [oppai.pp]
 			else:
 				raise exceptions.unsupportedGameModeException()
 
