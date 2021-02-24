@@ -131,14 +131,15 @@ class handler(requestsManager.asyncRequestHandler):
 					# Specific accuracy/mods, calculate pp
 					# Create oppai instance
 					log.debug("Specific request ({}%/{}). Calculating pp with oppai...".format(accuracy, modsEnum))
+					til_enable = accuracy is None
 					if gameMode == gameModes.STD and (modsEnum&mods.RELAX):
-						oppai = relaxoppai.oppai(bmap, mods=modsEnum, tillerino=False)
+						oppai = relaxoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable)
 					elif gameMode == gameModes.STD and (modsEnum&mods.RELAX2):
-						oppai = autoppai.oppai(bmap, mods=modsEnum, tillerino=False)
+						oppai = autoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable)
 					else:
-						oppai = rippoppai.oppai(bmap, mods=modsEnum, tillerino=False)
+						oppai = rippoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable)
 					bmap.starsStd = oppai.stars
-					if accuracy is not None:
+					if not til_enable:
 						returnPP = [calculatePPFromAcc(oppai, accuracy)]
 					else:
 						returnPP = [oppai.pp]
