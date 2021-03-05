@@ -142,7 +142,7 @@ class handler(requestsManager.asyncRequestHandler):
 					if not til_enable:
 						returnPP = [calculatePPFromAcc(oppai, accuracy)]
 					else:
-						returnPP = [oppai.pp]
+						returnPP = oppai.pp
 			else:
 				raise exceptions.unsupportedGameModeException()
 
