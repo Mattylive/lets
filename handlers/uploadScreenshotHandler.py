@@ -64,8 +64,8 @@ class handler(requestsManager.asyncRequestHandler):
 				return self.write("filesize")
 			
 			# Check if the file contents are actually fine (stop them uploading eg videos).
-			if (not test_jpeg(self.request.files["ss"][0]["body"]))\
-			and (not test_png(self.request.files["ss"][0]["body"])):
+			if (not test_jpeg(self.request.files["ss"][0]["body"], 0))\
+			and (not test_png(self.request.files["ss"][0]["body"], 0)):
 				return self.write("unknownfiletype")
 
 			# Write screenshot file to screenshots folder
