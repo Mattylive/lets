@@ -1,6 +1,8 @@
+import imghdr
 import os
 import sys
 import traceback
+from imghdr import test_jpeg, test_png
 
 import tornado.gen
 import tornado.web
@@ -38,15 +40,14 @@ class handler(requestsManager.asyncRequestHandler):
 			password = self.get_argument("p")
 			ip = self.getRequestIP()
 			userID = userUtils.getID(username)
-			if not userUtils.checkLogin(userID, password):
+			if not userUtils.checkLogin(userID, password, ip):
 				raise exceptions.loginFailedException(MODULE_NAME, username)
 			if userUtils.check2FA(userID, ip):
 				raise exceptions.need2FAException(MODULE_NAME, username, ip)
 
 			# Rate limit
 			if glob.redis.get("lets:screenshot:{}".format(userID)) is not None:
-				self.write("no")
-				return
+				return self.write("no")
 			glob.redis.set("lets:screenshot:{}".format(userID), 1, 60)
 
 			# Get a random screenshot id
@@ -56,6 +57,16 @@ class handler(requestsManager.asyncRequestHandler):
 				screenshotID = generalUtils.randomString(8)
 				if not os.path.isfile("{}/{}.jpg".format(glob.conf.config["server"]["screenshotspath"], screenshotID)):
 					found = True
+			
+			# Check if the filesize is not ridiculous. Through my checking I
+			# have discovered all screenshots on rosu are below 500kb.
+			if sys.getsizeof(self.request.files["ss"][0]["body"]) > 500000:
+				return self.write("filesize")
+			
+			# Check if the file contents are actually fine (stop them uploading eg videos).
+			if (not test_jpeg(self.request.files["ss"][0]["body"]))\
+			and (not test_png(self.request.files["ss"][0]["body"])):
+				return self.write("unknownfiletype")
 
 			# Write screenshot file to screenshots folder
 			with open("{}/{}.jpg".format(glob.conf.config["server"]["screenshotspath"], screenshotID), "wb") as f:
