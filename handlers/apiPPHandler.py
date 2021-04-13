@@ -139,9 +139,9 @@ class handler(requestsManager.asyncRequestHandler):
 					log.debug("Specific request ({}%/{}). Calculating pp with oppai...".format(accuracy, modsEnum))
 					til_enable = accuracy is None
 					if gameMode == gameModes.STD and (modsEnum&mods.RELAX):
-						oppai = relaxoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable, combo=max_combo))
+						oppai = relaxoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable, combo=max_combo)
 					elif gameMode == gameModes.STD and (modsEnum&mods.RELAX2):
-						oppai = autoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable, combo=max_combo))
+						oppai = autoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable, combo=max_combo)
 					else:
 						oppai = rippoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable, combo=max_combo)
 					bmap.starsStd = oppai.stars
