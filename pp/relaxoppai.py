@@ -37,7 +37,7 @@ class oppai:
 	"""
 	# __slots__ = ["pp", "score", "acc", "mods", "combo", "misses", "stars", "beatmap", "map"]
 
-	def __init__(self, __beatmap, __score = None, acc = 0, mods = 0, tillerino = False):
+	def __init__(self, __beatmap, __score = None, acc = 0, mods = 0, tillerino = False, combo: int = -1):
 		"""
 		Set oppai params.
 
@@ -46,13 +46,14 @@ class oppai:
 		acc -- manual acc. Used in tillerino-like bot. You don't need this if you pass __score object
 		mods -- manual mods. Used in tillerino-like bot. You don't need this if you pass __score object
 		tillerino -- If True, self.pp will be a list with pp values for 100%, 99%, 98% and 95% acc. Optional.
+		combo -- The maximum combo achieved by the user, used for PP api. Optional. Set to -1 for FC.
 		"""
 		# Default values
 		self.pp = None
 		self.score = None
 		self.acc = 0
 		self.mods = 0
-		self.combo = -1	#FC
+		self.combo = combo	#FC
 		self.misses = 0
 		self.stars = 0
 		self.tillerino = tillerino

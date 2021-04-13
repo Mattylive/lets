@@ -64,6 +64,12 @@ class handler(requestsManager.asyncRequestHandler):
 					raise exceptions.invalidArgumentsException(MODULE_NAME)
 			else:
 				accuracy = None
+			
+			# Max combo
+			if "max_combo" in self.request.arguments:
+				try: max_combo = int(self.get_argument("max_combo"))
+				except ValueError: raise exceptions.invalidArgumentsException(MODULE_NAME)
+			else: max_combo = -1
 
 			# Print message
 			log.info("Requested pp for beatmap {}".format(beatmapID))
@@ -98,7 +104,7 @@ class handler(requestsManager.asyncRequestHandler):
 			# Calculate pp
 			if gameMode in (gameModes.STD, gameModes.TAIKO):
 				# Std pp
-				if accuracy is None and modsEnum == 0:
+				if accuracy is None and max_combo == -1 and modsEnum == 0:
 					# Generic acc/nomod
 					# Get cached pp values
 					cachedPP = bmap.getCachedTillerinoPP()
@@ -133,11 +139,11 @@ class handler(requestsManager.asyncRequestHandler):
 					log.debug("Specific request ({}%/{}). Calculating pp with oppai...".format(accuracy, modsEnum))
 					til_enable = accuracy is None
 					if gameMode == gameModes.STD and (modsEnum&mods.RELAX):
-						oppai = relaxoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable)
+						oppai = relaxoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable, combo=max_combo))
 					elif gameMode == gameModes.STD and (modsEnum&mods.RELAX2):
-						oppai = autoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable)
+						oppai = autoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable, combo=max_combo))
 					else:
-						oppai = rippoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable)
+						oppai = rippoppai.oppai(bmap, mods=modsEnum, tillerino=til_enable, combo=max_combo)
 					bmap.starsStd = oppai.stars
 					if not til_enable:
 						returnPP = [calculatePPFromAcc(oppai, accuracy)]
