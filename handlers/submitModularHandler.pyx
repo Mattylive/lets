@@ -209,9 +209,9 @@ class handler(requestsManager.asyncRequestHandler):
 			# Calculate PP
 			length = 0
 			if s.passed and beatmapInfo.beatmapID < 100000000:
-				length = userUtils.getBeatmapTime(beatmapInfo.beatmapID)
+				length = beatmapInfo.hitLength
 			else:
-				length = math.ceil(int(self.get_argument("ft")) / 1000)
+				length = failTime
 			if UsingRelax: 	
 				userUtils.incrementPlaytimeRX(userID, s.gameMode, length)
 			elif UsingAutopilot:
@@ -311,7 +311,7 @@ class handler(requestsManager.asyncRequestHandler):
 				haxFlags = scoreData[17].count(' ') # 4 is normal, 0 is irregular but inconsistent.
 				if haxFlags != 4 and haxFlags != 0 and s.passed:
 					hack = getHackByFlag(int(haxFlags))
-					if type(hack) == str:
+					if type(hack) is str:
 						# THOT DETECTED
 						if glob.conf.config["discord"]["enable"]:
 							webhook = Webhook(glob.conf.config["discord"]["ahook"],
