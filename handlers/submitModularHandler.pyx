@@ -41,6 +41,28 @@ from objects.charts import BeatmapChart, OverallChart
 from secret import butterCake
 from secret.discord_hooks import Webhook
 MODULE_NAME = "submit_modular"
+
+# Compile time constants are kinda cool.
+DEF verified_badge = 1005
+
+cpdef bint check_verified(user_id: int):
+	"""Checks if the user with the id of `user_id` has the verified badge.
+	
+	Args:
+		user_id (int): The ID of the user within the database to check for the
+			presence of the verified badge.
+	
+	Returns:
+		`bint` (bool) corresponding to whether the user has the verified badge.
+	"""
+
+	res = glob.db.fetch(
+		"SELECT 1 FROM user_badges WHERE user = %s AND badge = %s LIMIT 1",
+		(user_id, verified_badge)
+	)
+
+	return res is not None
+
 class handler(requestsManager.asyncRequestHandler):
 	"""
 	Handler for /web/osu-submit-modular.php
@@ -232,30 +254,23 @@ class handler(requestsManager.asyncRequestHandler):
 				midPPCalcException = e
 
 			# Restrict obvious cheaters
-			if not restricted:
+			if (not restricted) and not check_verified(userID):
 				rx_pp = glob.conf.extra["lets"]["submit"]["max-rx-pp"]
 				ap_pp = glob.conf.extra["lets"]["submit"]["max-ap-pp"]
 				oof_pp = glob.conf.extra["lets"]["submit"]["max-vanilla-pp"]
 				
-				relax = 1 if used_mods & 128 else 0
-				
-				unrestricted_user = userUtils.noPPLimit(userID, relax)
-				
-				if UsingRelax: 
-					if (s.pp >= rx_pp and s.gameMode == gameModes.STD) and not unrestricted_user and not glob.conf.extra["mode"]["no-pp-cap"]:
-						userUtils.restrict(userID)
-						userUtils.appendNotes(userID, "Restricted due to too high pp gain ({}pp)".format(s.pp))
-						log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
-				elif UsingAutopilot:
-					unrestricted_user = userUtils.noPPLimitAP(userID)
-					if (s.pp >= ap_pp and s.gameMode == gameModes.STD) and not unrestricted_user and not glob.conf.extra["mode"]["no-pp-cap"]:
-						userUtils.restrict(userID)
-						userUtils.appendNotes(userID, "Restricted due to too high pp gain ({}pp)".format(s.pp))
-						log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
+				if UsingRelax and s.pp >= rx_pp and s.gameMode == gameModes.STD: 
+					userUtils.restrict(userID)
+					userUtils.appendNotes(userID, "Restricted due to breaking the PP cap on relax ({}pp)".format(s.pp))
+					log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
+				elif UsingAutopilot and s.pp >= ap_pp and s.gameMode == gameModes.STD:
+					userUtils.restrict(userID)
+					userUtils.appendNotes(userID, "Restricted due to breaking the PP cap on autopilot ({}pp)".format(s.pp))
+					log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
 				else:
-					if (s.pp >= oof_pp and s.gameMode == gameModes.STD) and not unrestricted_user and not glob.conf.extra["mode"]["no-pp-cap"]:
+					if s.pp >= oof_pp and s.gameMode == gameModes.STD:
 						userUtils.restrict(userID)
-						userUtils.appendNotes(userID, "Restricted due to too high pp gain ({}pp)".format(s.pp))
+						userUtils.appendNotes(userID, "Restricted due to breaking the PP cap on vanilla ({}pp)".format(s.pp))
 						log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
 
 			# Check notepad hack
