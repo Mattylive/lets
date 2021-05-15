@@ -267,11 +267,10 @@ class handler(requestsManager.asyncRequestHandler):
 					userUtils.restrict(userID)
 					userUtils.appendNotes(userID, "Restricted due to breaking the PP cap on autopilot ({}pp)".format(s.pp))
 					log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
-				else:
-					if s.pp >= oof_pp and s.gameMode == gameModes.STD:
-						userUtils.restrict(userID)
-						userUtils.appendNotes(userID, "Restricted due to breaking the PP cap on vanilla ({}pp)".format(s.pp))
-						log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
+				elif s.pp >= oof_pp and s.gameMode == gameModes.STD and not (UsingAutopilot or UsingRelax):
+					userUtils.restrict(userID)
+					userUtils.appendNotes(userID, "Restricted due to breaking the PP cap on vanilla ({}pp)".format(s.pp))
+					log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
 
 			# Check notepad hack
 			if bmk is None and bml is None:
