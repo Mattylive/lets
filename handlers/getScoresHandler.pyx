@@ -10,7 +10,7 @@ from common.constants import privileges
 from common.log import logUtils as log
 from common.ripple import userUtils
 from common.web import requestsManager
-from constants import exceptions
+from constants import exceptions, rankedStatuses
 from objects import glob
 from common.constants import mods
 from common.sentry import sentry
@@ -51,14 +51,19 @@ class handler(requestsManager.asyncRequestHandler):
 			scoreboardType = int(self.get_argument("v"))
 			scoreboardVersion = int(self.get_argument("vv"))
 
+			if len(md5) != 32: 
+				log.error(f"{username} sent an invalid MD5!")
+				raise exceptions.invalidArgumentsException(MODULE_NAME)
+			
+			# Not submitted/need update cache.
+			if md5 in glob.no_check_md5s: return self.write(f"{glob.no_check_md5s[md5]}|false")
+
 			# Login and ban check
 			userID = userUtils.getID(username)
 			if userID == 0:
 				raise exceptions.loginFailedException(MODULE_NAME, userID)
 			if not userUtils.checkLogin(userID, password, ip):
 				raise exceptions.loginFailedException(MODULE_NAME, username)
-			if userUtils.check2FA(userID, ip):
-				raise exceptions.need2FAException(MODULE_NAME, username, ip)
 			# Ban check is pointless here, since there's no message on the client
 			#if userHelper.isBanned(userID) == True:
 			#	raise exceptions.userBannedException(MODULE_NAME, username)
@@ -110,10 +115,13 @@ class handler(requestsManager.asyncRequestHandler):
 					)
 
 			# Data to return
-			data = ""
-			data += bmap.getData(sboard.totalScores, scoreboardVersion)
+			data = bmap.getData(sboard.totalScores, scoreboardVersion)
 			data += sboard.getScoresData()
 			self.write(data)
+
+			# Check if it needs update or is not submitted so we dont get exploited af.
+			if bmap.rankedStatus in (rankedStatuses.NOT_SUBMITTED, rankedStatuses.NEED_UPDATE):
+				glob.add_nocheck_md5(bmap.fileMD5, bmap.rankedStatus)
 
 			# Datadog stats
 			glob.dog.increment(glob.DATADOG_PREFIX+".served_leaderboards")

@@ -26,6 +26,19 @@ pascoa = {}
 debug = False
 sentry = False
 
+no_check_md5s = {}
+
+def add_nocheck_md5(md5: str, status: int) -> None:
+	"""Adds a beatmap MD5 to the list of md5s not to call osu api for.
+	Also makes sure the list doesn't get too large so we dont run out of
+	memory.
+	"""
+
+	no_check_md5s[md5] = status
+
+	# What did I just make?
+	if len(no_check_md5s) > 5000: del no_check_md5s[tuple(no_check_md5s)[0]]
+
 # Cache and objects
 fLocks = fileLocks.fileLocks()
 userStatsCache = userStatsCache.userStatsCache()
