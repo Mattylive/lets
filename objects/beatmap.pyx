@@ -205,20 +205,9 @@ class beatmap:
 		beatmapSetID -- beatmap set ID, used to check if a map is outdated
 		return -- True if set, False if not set
 		"""
-		# Check if osuapi is enabled
-		mainData = None
-		dataStd = osuapiHelper.osuApiRequest("get_beatmaps", "h={}&a=1&m=0".format(md5))
-		dataTaiko = osuapiHelper.osuApiRequest("get_beatmaps", "h={}&a=1&m=1".format(md5))
-		dataCtb = osuapiHelper.osuApiRequest("get_beatmaps", "h={}&a=1&m=2".format(md5))
-		dataMania = osuapiHelper.osuApiRequest("get_beatmaps", "h={}&a=1&m=3".format(md5))
-		if dataStd is not None:
-			mainData = dataStd
-		elif dataTaiko is not None:
-			mainData = dataTaiko
-		elif dataCtb is not None:
-			mainData = dataCtb
-		elif dataMania is not None:
-			mainData = dataMania
+		
+		# Map not found returns none
+		mainData = osuapiHelper.osuApiRequest("get_beatmaps", "h={}&a=1".format(md5))
 
 		# If the beatmap is frozen and still valid from osu!api, return True so we don't overwrite anything
 		if mainData is not None and self.rankedStatusFrozen == 1 and self.beatmapSetID > 100000000:
@@ -227,18 +216,7 @@ class beatmap:
 		# Can't fint beatmap by MD5. The beatmap has been updated. Check with beatmap set ID
 		if mainData is None:
 			log.debug("osu!api data is None")
-			dataStd = osuapiHelper.osuApiRequest("get_beatmaps", "s={}&a=1&m=0".format(beatmapSetID))
-			dataTaiko = osuapiHelper.osuApiRequest("get_beatmaps", "s={}&a=1&m=1".format(beatmapSetID))
-			dataCtb = osuapiHelper.osuApiRequest("get_beatmaps", "s={}&a=1&m=2".format(beatmapSetID))
-			dataMania = osuapiHelper.osuApiRequest("get_beatmaps", "s={}&a=1&m=3".format(beatmapSetID))
-			if dataStd is not None:
-				mainData = dataStd
-			elif dataTaiko is not None:
-				mainData = dataTaiko
-			elif dataCtb is not None:
-				mainData = dataCtb
-			elif dataMania is not None:
-				mainData = dataMania
+			mainData = osuapiHelper.osuApiRequest("get_beatmaps", "s={}&a=1".format(beatmapSetID))
 
 			if mainData is None:
 				# Still no data, beatmap is not submitted
@@ -262,32 +240,31 @@ class beatmap:
 		self.beatmapSetID = int(mainData["beatmapset_id"])
 		self.AR = float(mainData["diff_approach"])
 		self.OD = float(mainData["diff_overall"])
+		self.mode = int(mainData.get("mode", -1))
 
 		# Determine stars for every mode
 		self.starsStd = 0.0
 		self.starsTaiko = 0.0
 		self.starsCtb = 0.0
 		self.starsMania = 0.0
-		if dataStd is not None:
-			self.starsStd = float(dataStd.get("difficultyrating", 0))
-		if dataTaiko is not None:
-			self.starsTaiko = float(dataTaiko.get("difficultyrating", 0))
-		if dataCtb is not None:
+
+		if self.mode == 2:
+			d_rating = mainData.get("difficultyrating")
 			self.starsCtb = float(
-				next((x for x in (dataCtb.get("difficultyrating"), dataCtb.get("diff_aim")) if x is not None), 0)
+				d_rating if d_rating else mainData.get("diff_aim")
 			)
-		if dataMania is not None:
-			self.starsMania = float(dataMania.get("difficultyrating", 0))
+		elif self.mode == 0:
+			self.starsStd = float(mainData.get("difficultyrating", 0))
+		elif self.mode == 1:
+			self.starsTaiko = = float(mainData.get("difficultyrating", 0))
+		elif self.mode == 3:
+			self.starsMania = = float(mainData.get("difficultyrating", 0))
 
 		self.maxCombo = int(mainData["max_combo"]) if mainData["max_combo"] is not None else 0
 		self.hitLength = int(mainData["hit_length"])
-		if mainData["bpm"] is not None:
-			self.bpm = int(float(mainData["bpm"]))
-		else:
-			self.bpm = -1
+		if not mainData["bpm"]: self.bpm = int(float(mainData["bpm"]))
+		else: self.bpm = -1
 
-		# Realistik's stuff
-		self.mode = int(mainData.get("mode", -1))
 		return True
 
 	def setData(self, md5, beatmapSetID):

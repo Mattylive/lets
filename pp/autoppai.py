@@ -58,6 +58,8 @@ class oppai:
 		self.misses = 0
 		self.stars = 0
 		self.tillerino = tillerino
+		# AP only has std lol
+		self.gameMode = gameModes.STD
 
 		# Beatmap object
 		self.beatmap = __beatmap
@@ -69,17 +71,10 @@ class oppai:
 			self.mods = self.score.mods
 			self.combo = self.score.maxCombo
 			self.misses = self.score.cMiss
-			self.gameMode = self.score.gameMode
 		else:
 			# Otherwise, set acc and mods from params (tillerino)
 			self.acc = acc
 			self.mods = mods
-			if self.beatmap.starsStd > 0:
-				self.gameMode = gameModes.STD
-			elif self.beatmap.starsTaiko > 0:
-				self.gameMode = gameModes.TAIKO
-			else:
-				self.gameMode = None
 
 		# Calculate pp
 		log.debug("oppai-auto ~> Initialized oppai diffcalc")
