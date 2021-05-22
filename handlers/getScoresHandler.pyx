@@ -121,7 +121,7 @@ class handler(requestsManager.asyncRequestHandler):
 
 			# Check if it needs update or is not submitted so we dont get exploited af.
 			if bmap.rankedStatus in (rankedStatuses.NOT_SUBMITTED, rankedStatuses.NEED_UPDATE):
-				glob.add_nocheck_md5(bmap.fileMD5, bmap.rankedStatus)
+				glob.add_nocheck_md5(md5, bmap.rankedStatus)
 
 			# Datadog stats
 			glob.dog.increment(glob.DATADOG_PREFIX+".served_leaderboards")

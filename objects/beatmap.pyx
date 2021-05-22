@@ -256,9 +256,9 @@ class beatmap:
 		elif self.mode == 0:
 			self.starsStd = float(mainData.get("difficultyrating", 0))
 		elif self.mode == 1:
-			self.starsTaiko = = float(mainData.get("difficultyrating", 0))
+			self.starsTaiko = float(mainData.get("difficultyrating", 0))
 		elif self.mode == 3:
-			self.starsMania = = float(mainData.get("difficultyrating", 0))
+			self.starsMania = float(mainData.get("difficultyrating", 0))
 
 		self.maxCombo = int(mainData["max_combo"]) if mainData["max_combo"] is not None else 0
 		self.hitLength = int(mainData["hit_length"])
