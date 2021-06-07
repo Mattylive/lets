@@ -149,9 +149,9 @@ class beatmap:
 			return False
 
 		# Make sure the beatmap is not an old one
-		if data["difficulty_taiko"] == 0 and data["difficulty_ctb"] == 0 and data["difficulty_mania"] == 0:
-			log.debug("Difficulty for non-std gamemodes not found in DB, refreshing data from osu!api...")
-			return False
+		#if data["difficulty_taiko"] == 0 and data["difficulty_ctb"] == 0 and data["difficulty_mania"] == 0:
+		#	log.debug("Difficulty for non-std gamemodes not found in DB, refreshing data from osu!api...")
+		#	return False
 
 		# Set cached data period
 		expire = int(objects.glob.conf.config["server"]["beatmapcacheexpire"])
