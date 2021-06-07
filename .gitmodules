@@ -20,3 +20,6 @@
 [submodule "pp/oppai-rx"]
 	path = pp/oppai-rx
 	url = https://github.com/light-ripple/akatsuki-pp-relax.git
+[submodule "realistik"]
+	path = realistik
+	url = https://github.com/RealistikDash/rosu_priv

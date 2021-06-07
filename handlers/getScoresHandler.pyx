@@ -15,6 +15,14 @@ from objects import glob
 from common.constants import mods
 from common.sentry import sentry
 
+# Custom module go brr
+try:
+	from realistik.user_utils import verify_password
+except ImportError:
+	# Use ripples one.
+	log.warning("Using Ripple pass check!")
+	from common.ripple.userUtils import checkLogin as verify_password
+
 MODULE_NAME = "get_scores"
 class handler(requestsManager.asyncRequestHandler):
 	"""
@@ -23,10 +31,10 @@ class handler(requestsManager.asyncRequestHandler):
 	@tornado.web.asynchronous
 	@tornado.gen.engine
 	@sentry.captureTornado
-	def asyncGet(self):
+	cpdef asyncGet(self):
 		try:
 			# Get request ip
-			ip = self.getRequestIP()
+			cdef str ip = self.getRequestIP()
 
 			# Print arguments
 			if glob.debug:
@@ -37,19 +45,19 @@ class handler(requestsManager.asyncRequestHandler):
 			# Check required arguments
 			if not requestsManager.checkArguments(
 					self.request.arguments,
-					["c", "f", "i", "m", "us", "v", "vv", "mods"]
+					("c", "f", "i", "m", "us", "v", "vv", "mods")
 			):
 				raise exceptions.invalidArgumentsException(MODULE_NAME)
 
 			# GET parameters
-			md5 = self.get_argument("c")
-			fileName = self.get_argument("f")
-			beatmapSetID = self.get_argument("i")
-			gameMode = self.get_argument("m")
-			username = self.get_argument("us")
-			password = self.get_argument("ha")
-			scoreboardType = int(self.get_argument("v"))
-			scoreboardVersion = int(self.get_argument("vv"))
+			cdef str md5 = self.get_argument("c")
+			cdef str fileName = self.get_argument("f")
+			cdef str beatmapSetID = self.get_argument("i")
+			cdef str gameMode = self.get_argument("m")
+			cdef str username = self.get_argument("us")
+			cdef str password = self.get_argument("ha")
+			cdef int scoreboardType = int(self.get_argument("v"))
+			cdef int scoreboardVersion = int(self.get_argument("vv"))
 
 			if len(md5) != 32: 
 				log.error(f"{username} sent an invalid MD5!")
@@ -60,13 +68,9 @@ class handler(requestsManager.asyncRequestHandler):
 
 			# Login and ban check
 			userID = userUtils.getID(username)
-			if userID == 0:
-				raise exceptions.loginFailedException(MODULE_NAME, userID)
-			if not userUtils.checkLogin(userID, password, ip):
+			if userID == 0: raise exceptions.loginFailedException(MODULE_NAME, userID)
+			if not verify_password(userID, password):
 				raise exceptions.loginFailedException(MODULE_NAME, username)
-			# Ban check is pointless here, since there's no message on the client
-			#if userHelper.isBanned(userID) == True:
-			#	raise exceptions.userBannedException(MODULE_NAME, username)
 
 			# Hax check
 			if "a" in self.request.arguments:
@@ -74,26 +78,22 @@ class handler(requestsManager.asyncRequestHandler):
 					log.warning("Found AQN folder on user {} ({})".format(username, userID), "cm")
 					userUtils.setAqn(userID)
 
-			# Scoreboard type
-			isDonor = userUtils.getPrivileges(userID) & privileges.USER_DONOR > 0
-			country = False
-			friends = False
-			modsFilter = -1
-			mods = int(self.get_argument("mods"))
 
-			if scoreboardType == 4:
-				# Country leaderboard
-				country = True
-			elif scoreboardType == 2:
+			cdef int privs = userUtils.getPrivileges(userID)
+			# Scoreboard type
+			cdef bint isDonor = privs  & privileges.USER_DONOR > 0
+			cdef bint country = scoreboardType == 4
+			cdef bint friends = scoreboardType == 3 and isDonor
+			cdef bint modsFilter = -1
+			cdef int mods = int(self.get_argument("mods"))
+
+			if scoreboardType == 2:
 				# Mods leaderboard, replace mods (-1, every mod) with "mods" GET parameters
 				modsFilter = int(self.get_argument("mods"))
 
-			elif scoreboardType == 3 and isDonor:
-				# Friends leaderboard
-				friends = True
 
 			# Console output
-			fileNameShort = fileName[:32]+"..." if len(fileName) > 32 else fileName[:-4]
+			cdef str fileNameShort = fileName[:32]+"..." if len(fileName) > 32 else fileName[:-4]
 			log.info("Requested beatmap {} ({})".format(fileNameShort, md5))
 
 			# Create beatmap object and set its data
@@ -101,22 +101,21 @@ class handler(requestsManager.asyncRequestHandler):
 			bmap.saveFileName(fileName)
 
 			# Create leaderboard object, link it to bmap and get all scores
-			if bool(mods & 128):
+			if mods & 128:
 					sboard = scoreboardRelax.scoreboardRelax(
 					username, gameMode, bmap, setScores=True, country=country, mods=modsFilter, friends=friends
 					)
-			elif bool(mods & 8192):
+			elif mods & 8192:
 				sboard = scoreboardAuto.scoreboardAuto(
 					username, gameMode, bmap, setScores=True, country=country, mods=modsFilter, friends=friends
 				)
 			else:
 					sboard = scoreboard.scoreboard(
-					username, gameMode, bmap, setScores=True, country=country, mods=modsFilter, friends=friends
+						username, gameMode, bmap, setScores=True, country=country, mods=modsFilter, friends=friends
 					)
 
 			# Data to return
-			data = bmap.getData(sboard.totalScores, scoreboardVersion)
-			data += sboard.getScoresData()
+			cdef str data = bmap.getData(sboard.totalScores, scoreboardVersion) + sboard.getScoresData()
 			self.write(data)
 
 			# Check if it needs update or is not submitted so we dont get exploited af.

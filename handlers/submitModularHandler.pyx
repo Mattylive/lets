@@ -40,6 +40,15 @@ from objects import scoreboardAuto
 from objects.charts import BeatmapChart, OverallChart
 from secret import butterCake
 from secret.discord_hooks import Webhook
+
+# Custom module go brr
+try:
+	from realistik.user_utils import verify_password
+except ImportError:
+	# Use ripples one.
+	log.warning("Using Ripple pass check!")
+	from common.ripple.userUtils import checkLogin as verify_password
+
 MODULE_NAME = "submit_modular"
 
 # Compile time constants are kinda cool.
@@ -90,10 +99,8 @@ class handler(requestsManager.asyncRequestHandler):
 			iv = self.get_argument("iv")
 			password = self.get_argument("pass")
 			ip = self.getRequestIP()
-			if glob.conf.extra["lets"]["submit"]["ignore-x-flag"]:
-				quit_ = 0
-			else:
-				quit_ = self.get_argument("x") == "1"
+
+			quit_ = self.get_argument("x") == "1"
 			try:
 				failTime = max(0, int(self.get_argument("ft", 0)))
 			except ValueError:
@@ -116,13 +123,8 @@ class handler(requestsManager.asyncRequestHandler):
 				aeskey = "h89f2-890h2h89b34g-h80g134n90133"
 				OsuVer = "Really Old"
 
-			# Check arguments
-			if glob.conf.extra["lets"]["submit"]["ignore-x-flag"] or "RC" in OsuVer:
-				if not requestsManager.checkArguments(self.request.arguments, ["score", "iv", "st", "pass"]):
-					raise exceptions.invalidArgumentsException(MODULE_NAME)
-			else:
-				if not requestsManager.checkArguments(self.request.arguments, ["score", "iv", "pass", "st", "x"]):
-					raise exceptions.invalidArgumentsException(MODULE_NAME)
+			if not requestsManager.checkArguments(self.request.arguments, ["score", "iv", "pass", "st", "x"]):
+				raise exceptions.invalidArgumentsException(MODULE_NAME)
 
 			# Get score data
 			log.debug("Decrypting score data...")
@@ -150,15 +152,12 @@ class handler(requestsManager.asyncRequestHandler):
  
 				
 			# Bancho session/username-pass combo check
-			if not userUtils.checkLogin(userID, password, ip):
+			if not verify_password(userID, password): # What
 				raise exceptions.loginFailedException(MODULE_NAME, username)
-			# 2FA Check
-			if userUtils.check2FA(userID, ip):
-				raise exceptions.need2FAException(MODULE_NAME, userID, ip)
+
 			# Generic bancho session check
-			#if not userUtils.checkBanchoSession(userID):
-				# TODO: Ban (see except exceptions.noBanchoSessionException block)
-			#	raise exceptions.noBanchoSessionException(MODULE_NAME, username, ip)
+			if not userUtils.checkBanchoSession(userID):
+				raise exceptions.noBanchoSessionException(MODULE_NAME, username, ip)
 			# Ban check
 			if userUtils.isBanned(userID):
 				raise exceptions.userBannedException(MODULE_NAME, username)
@@ -178,23 +177,18 @@ class handler(requestsManager.asyncRequestHandler):
 				DAGAyMode = "RELAX"
 				ProfAppend = "rx/"
 				rx_type = 1
+				log.info("[RELAX] {} has submitted a score on {}...".format(username, scoreData[0]))
+				s = scoreRelax.score()
 			elif UsingAutopilot:
 				DAGAyMode = "AUTOPILOT"
 				ProfAppend = "ap/"
 				rx_type = 2
+				log.info("[AUTOPILOT] {} has submitted a score on {}...".format(username, scoreData[0]))
+				s = scoreAuto.score()
 			else:
 				DAGAyMode = "VANILLA"
 				ProfAppend = ""
 				rx_type = 0
-
-			# Create score object and set its data
-			if UsingRelax:
-				log.info("[RELAX] {} has submitted a score on {}...".format(username, scoreData[0]))
-				s = scoreRelax.score()
-			elif UsingAutopilot:
-				log.info("[AUTOPILOT] {} has submitted a score on {}...".format(username, scoreData[0]))
-				s = scoreAuto.score()
-			else:
 				log.info("[VANILLA] {} has submitted a score on {}...".format(username, scoreData[0]))
 				s = score.score()
 
