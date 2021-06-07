@@ -23,7 +23,7 @@ except ImportError:
 	log.warning("Using Ripple pass check!")
 	from common.ripple.userUtils import checkLogin as verify_password
 
-MODULE_NAME = "get_scores"
+cdef str MODULE_NAME = "get_scores"
 class handler(requestsManager.asyncRequestHandler):
 	"""
 	Handler for /web/osu-osz2-getscores.php
@@ -31,10 +31,29 @@ class handler(requestsManager.asyncRequestHandler):
 	@tornado.web.asynchronous
 	@tornado.gen.engine
 	@sentry.captureTornado
-	cpdef asyncGet(self):
+	def asyncGet(self):
+		cdef str ip
+		cdef str md5
+		cdef str fileName
+		cdef str beatmapSetID
+		cdef str gameMode
+		cdef str username
+		cdef str password
+		cdef int scoreboardType 
+		cdef int scoreboardVersion
+		cdef int privs
+
+		# Scoreboard type
+		cdef bint isDonor
+		cdef bint country
+		cdef bint friends
+		cdef bint modsFilter
+		cdef int mods
+		cdef str fileNameShort
+		cdef str data
 		try:
 			# Get request ip
-			cdef str ip = self.getRequestIP()
+			ip = self.getRequestIP()
 
 			# Print arguments
 			if glob.debug:
@@ -50,14 +69,14 @@ class handler(requestsManager.asyncRequestHandler):
 				raise exceptions.invalidArgumentsException(MODULE_NAME)
 
 			# GET parameters
-			cdef str md5 = self.get_argument("c")
-			cdef str fileName = self.get_argument("f")
-			cdef str beatmapSetID = self.get_argument("i")
-			cdef str gameMode = self.get_argument("m")
-			cdef str username = self.get_argument("us")
-			cdef str password = self.get_argument("ha")
-			cdef int scoreboardType = int(self.get_argument("v"))
-			cdef int scoreboardVersion = int(self.get_argument("vv"))
+			md5 = self.get_argument("c")
+			fileName = self.get_argument("f")
+			beatmapSetID = self.get_argument("i")
+			gameMode = self.get_argument("m")
+			username = self.get_argument("us")
+			password = self.get_argument("ha")
+			scoreboardType = int(self.get_argument("v"))
+			scoreboardVersion = int(self.get_argument("vv"))
 
 			if len(md5) != 32: 
 				log.error(f"{username} sent an invalid MD5!")
@@ -79,13 +98,13 @@ class handler(requestsManager.asyncRequestHandler):
 					userUtils.setAqn(userID)
 
 
-			cdef int privs = userUtils.getPrivileges(userID)
+			privs = userUtils.getPrivileges(userID)
 			# Scoreboard type
-			cdef bint isDonor = privs  & privileges.USER_DONOR > 0
-			cdef bint country = scoreboardType == 4
-			cdef bint friends = scoreboardType == 3 and isDonor
-			cdef bint modsFilter = -1
-			cdef int mods = int(self.get_argument("mods"))
+			isDonor = privs  & privileges.USER_DONOR > 0
+			country = scoreboardType == 4
+			friends = scoreboardType == 3 and isDonor
+			modsFilter = -1
+			mods = int(self.get_argument("mods"))
 
 			if scoreboardType == 2:
 				# Mods leaderboard, replace mods (-1, every mod) with "mods" GET parameters
@@ -93,7 +112,7 @@ class handler(requestsManager.asyncRequestHandler):
 
 
 			# Console output
-			cdef str fileNameShort = fileName[:32]+"..." if len(fileName) > 32 else fileName[:-4]
+			fileNameShort = fileName[:32]+"..." if len(fileName) > 32 else fileName[:-4]
 			log.info("Requested beatmap {} ({})".format(fileNameShort, md5))
 
 			# Create beatmap object and set its data
@@ -115,7 +134,7 @@ class handler(requestsManager.asyncRequestHandler):
 					)
 
 			# Data to return
-			cdef str data = bmap.getData(sboard.totalScores, scoreboardVersion) + sboard.getScoresData()
+			data = bmap.getData(sboard.totalScores, scoreboardVersion) + sboard.getScoresData()
 			self.write(data)
 
 			# Check if it needs update or is not submitted so we dont get exploited af.
