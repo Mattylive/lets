@@ -378,10 +378,6 @@ class handler(requestsManager.asyncRequestHandler):
 				params = urlencode({"k": glob.conf.config["server"]["apikey"], "to": username.encode().decode("ASCII", "ignore"), "msg": alert})
 				requests.get("{}/api/v1/fokabotMessage?{}".format(glob.conf.config["server"]["banchourl"], params))
 				return
-
-			# NOTE: Process logging was removed from the client starting from 20180322
-			if s.completed == 3 and "pl" in self.request.arguments:
-				butterCake.bake(self, s)
 				
 			# Save replay for all passed scores
 			# Make sure the score has an id as well (duplicated?, query error?)
@@ -392,37 +388,14 @@ class handler(requestsManager.asyncRequestHandler):
 					replay = self.request.files["score"][0]["body"]
 
 					if UsingRelax:
-						RPBUILD = replayHelperRelax.buildFullReplay
 						with open("{}_relax/replay_{}.osr".format(glob.conf.config["server"]["replayspath"], (s.scoreID)), "wb") as f:
 							f.write(replay)
 					elif UsingAutopilot:
-						RPBUILD = replayHelperAuto.buildFullReplay
 						with open("{}_ap/replay_{}.osr".format(glob.conf.config["server"]["replayspath"], (s.scoreID)), "wb") as f:
 							f.write(replay)
 					else:
-						RPBUILD = replayHelper.buildFullReplay
 						with open("{}/replay_{}.osr".format(glob.conf.config["server"]["replayspath"], (s.scoreID)), "wb") as f:
 							f.write(replay)
-
-					if glob.conf.config["cono"]["enable"]:
-						# We run this in a separate thread to avoid slowing down scores submission,
-						# as cono needs a full replay
-						threading.Thread(target=lambda: glob.redis.publish(
-							"cono:analyze", json.dumps({
-								"score_id": s.scoreID,
-								"beatmap_id": beatmapInfo.beatmapID,
-								"user_id": s.playerUserID,
-								"game_mode": s.gameMode,
-								"pp": s.pp,
-								"completed": s.completed,
-								"replay_data": base64.b64encode(
-									RPBUILD(
-										s.scoreID,
-										rawReplay=self.request.files["score"][0]["body"]
-									)
-								).decode(),
-							})
-						)).start()
 				else:
 					# Restrict if no replay was provided
 					if not restricted:
@@ -612,13 +585,6 @@ class handler(requestsManager.asyncRequestHandler):
 
 				# Get info about score if they passed the map (Ranked)
 				userStats = userUtils.getUserStats(userID, s.gameMode)
-				if s.completed == 3 and not restricted and beatmapInfo.rankedStatus >= rankedStatuses.RANKED and s.pp > 0:
-					glob.redis.publish("scores:new_score", json.dumps({
-						"gm":s.gameMode,
-						"user":{"username":username, "userID": userID, "rank":newUserStats["gameRank"],"oldaccuracy":oldStats["accuracy"],"accuracy":newUserStats["accuracy"], "oldpp":oldStats["pp"],"pp":newUserStats["pp"]},
-						"score":{"scoreID": s.scoreID, "mods":s.mods, "accuracy":s.accuracy, "missess":s.cMiss, "combo":s.maxCombo, "pp":s.pp, "rank":newScoreboard.personalBestRank, "ranking":s.rank},
-						"beatmap":{"beatmapID": beatmapInfo.beatmapID, "beatmapSetID": beatmapInfo.beatmapSetID, "max_combo":beatmapInfo.maxCombo, "song_name":beatmapInfo.songName}
-						}))
 
 				# Send message to #announce if we're rank #1
 				if newScoreboard.personalBestRank == 1 and s.completed == 3 and not restricted:

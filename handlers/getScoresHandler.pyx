@@ -47,10 +47,11 @@ class handler(requestsManager.asyncRequestHandler):
 		cdef bint isDonor
 		cdef bint country
 		cdef bint friends
-		cdef bint modsFilter
+		cdef int modsFilter
 		cdef int mods
 		cdef str fileNameShort
 		cdef str data
+		cdef int userID
 		try:
 			# Get request ip
 			ip = self.getRequestIP()
@@ -87,13 +88,13 @@ class handler(requestsManager.asyncRequestHandler):
 
 			# Login and ban check
 			userID = userUtils.getID(username)
-			if userID == 0: raise exceptions.loginFailedException(MODULE_NAME, userID)
+			if not userID: raise exceptions.loginFailedException(MODULE_NAME, userID)
 			if not verify_password(userID, password):
 				raise exceptions.loginFailedException(MODULE_NAME, username)
 
 			# Hax check
 			if "a" in self.request.arguments:
-				if int(self.get_argument("a")) == 1 and not userUtils.getAqn(userID):
+				if int(self.get_argument("a")) == 1:
 					log.warning("Found AQN folder on user {} ({})".format(username, userID), "cm")
 					userUtils.setAqn(userID)
 
