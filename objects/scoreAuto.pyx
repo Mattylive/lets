@@ -178,6 +178,7 @@ class score:
 			c = glob.clan_cache.get(data["userid"])
 			if c: self.playerName = f"[{c}] " + data["username"]
 			else: self.playerName = data["username"]
+		# This is kinda weird ngl
 		else: self.playerName = userUtils.getUsername(data["userid"])
 		self.playerUserID = data["userid"]
 		self.score = data["score"]

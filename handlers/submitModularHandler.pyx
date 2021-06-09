@@ -81,27 +81,27 @@ cdef str mods_from_enum(int mod_enum):
 	
 	if mod_enum == 0:
 		mod_text += "NM"
-	if mod_enum & mods.NOFAIL
+	if mod_enum & mods.NOFAIL:
 		mod_text += "NF"
 	if mod_enum & mods.EASY:
 		mod_text += "EZ"
 	if mod_enum & mods.HIDDEN:
 		mod_text += "HD"
-	if mod_enum & mods.HARDROCK
+	if mod_enum & mods.HARDROCK:
 		mod_text += "HR"
 	if mod_enum & mods.DOUBLETIME:
 		mod_text += "DT"
 	if mod_enum & mods.HALFTIME:
 		mod_text += "HT"
-	if mod_enum & mods.FLASHLIGHT > 0:
+	if mod_enum & mods.FLASHLIGHT:
 		mod_text += "FL"
-	if mod_enum & mods.SPUNOUT > 0:
+	if mod_enum & mods.SPUNOUT:
 		mod_text += "SO"
-	if mod_enum & mods.TOUCHSCREEN > 0:
+	if mod_enum & mods.TOUCHSCREEN:
 		mod_text += "TD"
-	if mod_enum & mods.RELAX > 0:
+	if mod_enum & mods.RELAX:
 		mod_text += "RX"
-	if mod_enum & mods.RELAX2 > 0:
+	if mod_enum & mods.RELAX2:
 		mod_text += "AP"
 	return mod_text
 
@@ -571,7 +571,7 @@ class handler(requestsManager.asyncRequestHandler):
 						)
 
 					# Thread inefficiency go BRRRR.
-					thread.Thread(target=requests.get, args=("{}/api/v1/fokabotMessage?{}".format(
+					threading.Thread(target=requests.get, args=("{}/api/v1/fokabotMessage?{}".format(
 						glob.conf.config["server"]["banchourl"],
 						urlencode({"k": glob.conf.config["server"]["apikey"], "to": "#announce", "msg": annmsg})
 					)))
@@ -638,7 +638,7 @@ class handler(requestsManager.asyncRequestHandler):
 						webhook = Webhook(url, color=0x0f97ff, footer="New top score achieved on RealistikOsu!")
 						webhook.set_author(name=username.encode().decode("ASCII", "ignore"), icon=f'https://a.ussr.pl/{userID}')
 						webhook.set_title(title=f"New score by {username}!")
-						webhook.set_desc("[{}] Achieved #1 on mode **{}**, {} +{}!".format(DAGAyMode, gameModes.getGamemodeFull(s.gameMode), beatmapInfo.songName.encode().decode("ASCII", "ignore"), ScoreMods))
+						webhook.set_desc("[{}] Achieved #1 on mode **{}**, {} +{}!".format(DAGAyMode, gameModes.getGamemodeFull(s.gameMode), beatmapInfo.songName.encode().decode("ASCII", "ignore"), user_mods))
 						webhook.add_field(name='Total: {}pp'.format(float("{0:.2f}".format(s.pp))), value='Gained: +{}pp'.format(float("{0:.2f}".format(ppGained))))
 						webhook.add_field(name='Actual rank: {}'.format(rankInfo["currentRank"]), value='[Download Link](https://ussr.pl/d/{})'.format(beatmapInfo.beatmapSetID))
 						webhook.add_field(name='Played by: {}'.format(username.encode().decode("ASCII", "ignore")), value="[Go to user's profile](https://ussr.pl/{}u/{})".format(ProfAppend, userID))
