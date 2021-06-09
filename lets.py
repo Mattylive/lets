@@ -15,6 +15,12 @@ import shutil
 from distutils.version import LooseVersion
 
 from constants import rankedStatuses
+from objects import glob
+from helpers import consoleHelper
+
+# Read config
+consoleHelper.printNoNl("> Reading config file... ")
+glob.conf = config.config("config.ini")
 
 from common.constants import bcolors, mods
 from common.db import dbConnector
@@ -51,10 +57,8 @@ from handlers import uploadScreenshotHandler
 from handlers import commentHandler
 from handlers import lastFMHandler
 from helpers import config
-from helpers import consoleHelper
 from common import generalUtils
 from common import agpl
-from objects import glob
 from pubSubHandlers import beatmapUpdateHandler
 import secret.achievements.utils
 
@@ -123,10 +127,6 @@ if __name__ == "__main__":
 
 	try:
 		consoleHelper.printServerStartHeader(True)
-
-		# Read config
-		consoleHelper.printNoNl("> Reading config file... ")
-		glob.conf = config.config("config.ini")
 
 		if glob.conf.default:
 			# We have generated a default config.ini, quit server
