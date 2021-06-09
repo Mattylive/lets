@@ -27,6 +27,7 @@ debug = False
 sentry = False
 
 no_check_md5s = {}
+clan_cache = None
 
 def add_nocheck_md5(md5: str, status: int) -> None:
 	"""Adds a beatmap MD5 to the list of md5s not to call osu api for.

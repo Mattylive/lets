@@ -669,12 +669,6 @@ class handler(requestsManager.asyncRequestHandler):
 			pass
 		except exceptions.loginFailedException:
 			self.write("error: pass")
-		except exceptions.need2FAException:
-			# Send error pass to notify the user
-			# resend the score at regular intervals
-			# for users with memy connection
-			self.set_status(408)
-			self.write("error: 2fa")
 		except exceptions.userBannedException:
 			self.write("error: ban")
 		except exceptions.noBanchoSessionException:
@@ -698,5 +692,4 @@ class handler(requestsManager.asyncRequestHandler):
 			# Every other exception returns a 408 error (timeout)
 			# This avoids lost scores due to score server crash
 			# because the client will send the score again after some time.
-			if keepSending:
-				self.set_status(408)
+			if keepSending: self.set_status(408)

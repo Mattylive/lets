@@ -114,16 +114,14 @@ class scoreboard:
 			country = ""
 
 		# Mods ranking (ignore auto, since we use it for pp sorting)
+		mods = ""
 		if self.mods > -1 and self.mods & modsEnum.AUTOPLAY == 0:
 			mods = "AND scores.mods = %(mods)s"
-		else:
-			mods = ""
 
 		# Friends ranking
+		friends = ""
 		if self.friends:
-			friends = "AND (scores.userid IN (SELECT user2 FROM users_relationships WHERE user1 = %(userid)s) OR scores.userid = %(userid)s)"
-		else:
-			friends = ""
+			friends = "AND (scores.userid IN (SELECT user2 FROM users_relationships WHERE user1 = %(userid)s) OR scores.userid = %(userid)s)"			
 
 		# Sort and limit at the end
 		if not self.ppboard and self.mods <= -1 or self.mods & modsEnum.AUTOPLAY == 0:

@@ -58,6 +58,8 @@ from objects import glob
 from pubSubHandlers import beatmapUpdateHandler
 import secret.achievements.utils
 
+from helpers.clan_helper import ClanCache
+
 
 def make_app():
 	return tornado.web.Application([
@@ -230,6 +232,20 @@ if __name__ == "__main__":
 		except:
 			consoleHelper.printError()
 			consoleHelper.printColored("[!] Error while creating threads pool. Please check your config.ini and run the server again", bcolors.RED)
+		
+		# Clan cache.
+		consoleHelper.printNoNl("> Creating clan cache... ")
+		glob.clan_cache = ClanCache()
+		try:
+			glob.clan_cache.bulk_cache()
+			consoleHelper.printNoNl(f"Cached {glob.clan_cache.cached_count} clan members! ")
+			consoleHelper.printDone()
+		except Exception:
+			consoleHelper.printError()
+			consoleHelper.printColored(
+				"[!] Clans could not be cached! This means in-game leaderboards will NOT display clans.",
+				bcolors.RED
+			)
 
 		# Check osuapi
 		if not generalUtils.stringToBool(glob.conf.config["osuapi"]["enable"]):
