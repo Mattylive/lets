@@ -78,9 +78,6 @@ class beatmap:
 			# Unfreeze beatmap status
 			frozen = False
 
-		if objects.glob.conf.extra["mode"]["rank-all-maps"]:
-			self.rankedStatus = 2
-
 		# Add new beatmap data
 		log.debug("Saving beatmap data in db...")
 		"""
@@ -305,11 +302,7 @@ class beatmap:
 		return -- beatmap header for getscores
 		"""
 		# Fix loved maps for old clients
-		if version < 4 and self.rankedStatus == rankedStatuses.LOVED:
-			rankedStatusOutput = rankedStatuses.QUALIFIED
-		else:
-			rankedStatusOutput = self.rankedStatus
-		data = "{}|false".format(rankedStatusOutput)
+		cdef str data = "{}|false".format(self.rankedStatus)
 		if self.rankedStatus != rankedStatuses.NOT_SUBMITTED and self.rankedStatus != rankedStatuses.NEED_UPDATE and self.rankedStatus != rankedStatuses.UNKNOWN:
 			# If the beatmap is updated and exists, the client needs more data
 			data += "|{}|{}|{}\n{}\n{}\n{}\n".format(self.beatmapID, self.beatmapSetID, totalScores, self.offset, self.songName, self.rating)
@@ -341,7 +334,7 @@ class beatmap:
 	def is_rankable(self):
 		return self.rankedStatus >= rankedStatuses.RANKED and self.rankedStatus != rankedStatuses.UNKNOWN
 
-def convertRankedStatus(approvedStatus):
+cpdef int convertRankedStatus(int approvedStatus):
 	"""
 	Convert approved_status (from osu!api) to ranked status (for getscores)
 
@@ -349,7 +342,6 @@ def convertRankedStatus(approvedStatus):
 	return -- rankedStatus for getscores
 	"""
 
-	approvedStatus = int(approvedStatus)
 	if approvedStatus <= 0:
 		return rankedStatuses.PENDING
 	elif approvedStatus == 1:
@@ -374,5 +366,5 @@ def incrementPlaycount(md5, passed):
 		f"UPDATE beatmaps "
 		f"SET playcount = playcount+1{', passcount = passcount+1' if passed else ''} "
 		f"WHERE beatmap_md5 = %s LIMIT 1",
-		[md5]
+		(md5,)
 	)

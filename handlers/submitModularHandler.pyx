@@ -15,6 +15,7 @@ import secret.achievements.utils
 from common import generalUtils
 from common.constants import gameModes
 from common.constants import mods
+from common.constants import privileges
 from common.log import logUtils as log
 from common.ripple import userUtils
 from common.web import requestsManager
@@ -53,6 +54,7 @@ MODULE_NAME = "submit_modular"
 
 # Compile time constants are kinda cool.
 DEF verified_badge = 1005
+cdef str REPLAY_PATH_BASE = glob.conf.config["server"]["replayspath"] + "{}/replay_{}.osr"
 
 cpdef bint check_verified(user_id: int):
 	"""Checks if the user with the id of `user_id` has the verified badge.
@@ -72,6 +74,37 @@ cpdef bint check_verified(user_id: int):
 
 	return res is not None
 
+cdef str mods_from_enum(int mod_enum):
+	"""Converts a mod enum to readable text. This kinda sucks ngl..."""
+
+	cdef str mod_text = ""
+	
+	if mod_enum == 0:
+		mod_text += "NM"
+	if mod_enum & mods.NOFAIL
+		mod_text += "NF"
+	if mod_enum & mods.EASY:
+		mod_text += "EZ"
+	if mod_enum & mods.HIDDEN:
+		mod_text += "HD"
+	if mod_enum & mods.HARDROCK
+		mod_text += "HR"
+	if mod_enum & mods.DOUBLETIME:
+		mod_text += "DT"
+	if mod_enum & mods.HALFTIME:
+		mod_text += "HT"
+	if mod_enum & mods.FLASHLIGHT > 0:
+		mod_text += "FL"
+	if mod_enum & mods.SPUNOUT > 0:
+		mod_text += "SO"
+	if mod_enum & mods.TOUCHSCREEN > 0:
+		mod_text += "TD"
+	if mod_enum & mods.RELAX > 0:
+		mod_text += "RX"
+	if mod_enum & mods.RELAX2 > 0:
+		mod_text += "AP"
+	return mod_text
+
 class handler(requestsManager.asyncRequestHandler):
 	"""
 	Handler for /web/osu-submit-modular.php
@@ -80,7 +113,6 @@ class handler(requestsManager.asyncRequestHandler):
 	@tornado.gen.engine
 	#@sentry.captureTornado
 	def asyncPost(self):
-		newCharts = self.request.uri == "/web/osu-submit-modular-selector.php"
 		try:
 			# Resend the score in case of unhandled exceptions
 			keepSending = True
@@ -100,7 +132,7 @@ class handler(requestsManager.asyncRequestHandler):
 			password = self.get_argument("pass")
 			ip = self.getRequestIP()
 
-			quit_ = self.get_argument("x") == "1"
+			quit_ = self.get_argument("x") == "1" #quitw
 			try:
 				failTime = max(0, int(self.get_argument("ft", 0)))
 			except ValueError:
@@ -116,12 +148,7 @@ class handler(requestsManager.asyncRequestHandler):
 				bml = None
 
 			# Get right AES Key
-			if "osuver" in self.request.arguments:
-				aeskey = "osu!-scoreburgr---------{}".format(self.get_argument("osuver"))
-				OsuVer = self.get_argument("osuver")
-			else:
-				aeskey = "h89f2-890h2h89b34g-h80g134n90133"
-				OsuVer = "Really Old"
+			aeskey = "osu!-scoreburgr---------{}".format(self.get_argument("osuver"))
 
 			if not requestsManager.checkArguments(self.request.arguments, ["score", "iv", "pass", "st", "x"]):
 				raise exceptions.invalidArgumentsException(MODULE_NAME)
@@ -158,28 +185,31 @@ class handler(requestsManager.asyncRequestHandler):
 			# Generic bancho session check
 			if not userUtils.checkBanchoSession(userID):
 				raise exceptions.noBanchoSessionException(MODULE_NAME, username, ip)
-			# Ban check
-			if userUtils.isBanned(userID):
-				raise exceptions.userBannedException(MODULE_NAME, username)
+			# Privilege checks using a singular query rather than 2 for the same thing.
+			u_privs = userUtils.getPrivileges(userID)
+			banned = not u_privs & privileges.USER_NORMAL
+			restricted = not u_privs & privileges.USER_PUBLIC
+
+			if banned: raise exceptions.userBannedException(MODULE_NAME, username)
 			# Data length check
 			if len(scoreData) < 16:
 				raise exceptions.invalidArgumentsException(MODULE_NAME)
-
-			# Get restricted
-			restricted = userUtils.isRestricted(userID)
 
 			# Get variables for relax
 			used_mods = int(scoreData[13])
 			UsingRelax = used_mods & 128
 			UsingAutopilot = used_mods & 8192
-
+			rx_type = 0
+			replay_suffix = ""
 			if UsingRelax:
+				replay_suffix = "_relax"
 				DAGAyMode = "RELAX"
 				ProfAppend = "rx/"
 				rx_type = 1
 				log.info("[RELAX] {} has submitted a score on {}...".format(username, scoreData[0]))
 				s = scoreRelax.score()
 			elif UsingAutopilot:
+				replay_suffix = "_ap"
 				DAGAyMode = "AUTOPILOT"
 				ProfAppend = "ap/"
 				rx_type = 2
@@ -325,8 +355,8 @@ class handler(requestsManager.asyncRequestHandler):
 							webhook = Webhook(glob.conf.config["discord"]["ahook"],
 											  color=0xadd836,
 											  footer="I SPOT A THOT. [ Client AC ]")
-							webhook.set_title(title=f"Caught some cheater {username} ({userID})")
-							webhook.set_desc(f'This body caught with flag {haxFlags}\nIn enuming: {hack}')
+							webhook.set_title(title=f"CHEATER POLICE HERE. WE CAUGHT CHEATERMAN {username} ({userID})")
+							webhook.set_desc(f'DETECTED FLAG {haxFlags}\nIN ENUM: {hack}')
 							webhook.post()
 
 			'''
@@ -355,29 +385,14 @@ class handler(requestsManager.asyncRequestHandler):
 			if s.gameMode == gameModes.MANIA and s.score > 1000000:
 				userUtils.ban(userID)
 				userUtils.appendNotes(userID, "Banned due to mania score > 1000000 (score submitter)")
-			elif s.gameMode == gameModes.MANIA and s.score > 1000000 and not glob.conf.extra["mode"]["anticheat"]:
-				alert = "{}, seems like you've exceed osu!Mania score limit (1000000), this score won't submit for you.".format(username.encode().decode("ASCII", "ignore"))
-				params = urlencode({"k": glob.conf.config["server"]["apikey"], "to": username.encode().decode("ASCII", "ignore"), "msg": alert})
-				requests.get("{}/api/v1/fokabotMessage?{}".format(glob.conf.config["server"]["banchourl"], params))
-				return
 
 			# google translate : I put my face on it, I put my head on it and I put my heart o
 			if ((s.mods & mods.DOUBLETIME) > 0 and (s.mods & mods.HALFTIME) > 0) \
 			or ((s.mods & mods.HARDROCK) > 0 and (s.mods & mods.EASY) > 0)\
 			or ((s.mods & mods.RELAX) > 0 and (s.mods & mods.RELAX2) > 0) \
-			or ((s.mods & mods.SUDDENDEATH) > 0 and (s.mods & mods.NOFAIL) > 0) \
-			and glob.conf.extra["mode"]["anticheat"]:
+			or ((s.mods & mods.SUDDENDEATH) > 0 and (s.mods & mods.NOFAIL) > 0):
 				userUtils.ban(userID)
 				userUtils.appendNotes(userID, "Impossible mod combination {} (score submitter)".format(s.mods))
-			elif ((s.mods & mods.DOUBLETIME) > 0 and (s.mods & mods.HALFTIME) > 0) \
-			or ((s.mods & mods.HARDROCK) > 0 and (s.mods & mods.EASY) > 0)\
-			or ((s.mods & mods.RELAX) > 0 and (s.mods & mods.RELAX2) > 0) \
-			or ((s.mods & mods.SUDDENDEATH) > 0 and (s.mods & mods.NOFAIL) > 0) \
-			and not glob.conf.extra["mode"]["anticheat"]:
-				alert = "{}, seems like you've used osu! score submitter limit (Impossible mod combination), this score won't submit for you.".format(username.encode().decode("ASCII", "ignore"))
-				params = urlencode({"k": glob.conf.config["server"]["apikey"], "to": username.encode().decode("ASCII", "ignore"), "msg": alert})
-				requests.get("{}/api/v1/fokabotMessage?{}".format(glob.conf.config["server"]["banchourl"], params))
-				return
 				
 			# Save replay for all passed scores
 			# Make sure the score has an id as well (duplicated?, query error?)
@@ -385,17 +400,8 @@ class handler(requestsManager.asyncRequestHandler):
 				if "score" in self.request.files:
 					# Save the replay if it was provided
 					log.debug("Saving replay ({})...".format(s.scoreID))
-					replay = self.request.files["score"][0]["body"]
-
-					if UsingRelax:
-						with open("{}_relax/replay_{}.osr".format(glob.conf.config["server"]["replayspath"], (s.scoreID)), "wb") as f:
-							f.write(replay)
-					elif UsingAutopilot:
-						with open("{}_ap/replay_{}.osr".format(glob.conf.config["server"]["replayspath"], (s.scoreID)), "wb") as f:
-							f.write(replay)
-					else:
-						with open("{}/replay_{}.osr".format(glob.conf.config["server"]["replayspath"], (s.scoreID)), "wb") as f:
-							f.write(replay)
+					with open(REPLAY_PATH_BASE.format(replay_suffix, s.scoreID), "wb") as f:
+						f.write(self.request.files["score"][0]["body"])
 				else:
 					# Restrict if no replay was provided
 					if not restricted:
@@ -409,8 +415,7 @@ class handler(requestsManager.asyncRequestHandler):
 			beatmap.incrementPlaycount(s.fileMd5, s.passed)
 
 			# Let the api know of this score
-			if s.scoreID:
-				glob.redis.publish("api:score_submission", s.scoreID)
+			if s.scoreID: glob.redis.publish("api:score_submission", s.scoreID)
 
 			# Re-raise pp calc exception after saving score, cake, replay etc
 			# so Sentry can track it without breaking score submission
@@ -521,59 +526,25 @@ class handler(requestsManager.asyncRequestHandler):
 					rankInfo = leaderboardHelper.getRankInfo(userID, s.gameMode)
 					currentPersonalBest = score.score(personalBestID, newScoreboard.personalBestRank)
 
-				# Output dictionary
-				if newCharts:
-					log.debug("Using new charts")
-					dicts = [
-						collections.OrderedDict([
-							("beatmapId", beatmapInfo.beatmapID),
-							("beatmapSetId", beatmapInfo.beatmapSetID),
-							("beatmapPlaycount", beatmapInfo.playcount + 1),
-							("beatmapPasscount", beatmapInfo.passcount + (s.completed == 3)),
-							("approvedDate", beatmapInfo.rankingDate)
-						]),
-						BeatmapChart(
-							oldPersonalBest if s.completed == 3 else currentPersonalBest,
-							currentPersonalBest if s.completed == 3 else s,
-							beatmapInfo.beatmapID,
-						),
-						OverallChart(
-							userID, oldUserStats, newUserStats, s, new_achievements, oldRank, rankInfo["currentRank"]
-						)
-					]
-				else:
-					log.debug("Using old charts")
-					dicts = [
-						collections.OrderedDict([
-							("beatmapId", beatmapInfo.beatmapID),
-							("beatmapSetId", beatmapInfo.beatmapSetID),
-							("beatmapPlaycount", beatmapInfo.playcount),
-							("beatmapPasscount", beatmapInfo.passcount),
-							("approvedDate", beatmapInfo.rankingDate)
-						]),
-						collections.OrderedDict([
-							("chartId", "overall"),
-							("chartName", "Overall Ranking"),
-							("chartEndDate", ""),
-							("beatmapRankingBefore", oldPersonalBestRank),
-							("beatmapRankingAfter", newScoreboard.personalBestRank),
-							("rankedScoreBefore", oldUserStats["rankedScore"]),
-							("rankedScoreAfter", newUserStats["rankedScore"]),
-							("totalScoreBefore", oldUserStats["totalScore"]),
-							("totalScoreAfter", newUserStats["totalScore"]),
-							("playCountBefore", newUserStats["playcount"]),
-							("accuracyBefore", float(oldUserStats["accuracy"])/100),
-							("accuracyAfter", float(newUserStats["accuracy"])/100),
-							("rankBefore", oldRank),
-							("rankAfter", rankInfo["currentRank"]),
-							("toNextRank", rankInfo["difference"]),
-							("toNextRankUser", rankInfo["nextUsername"]),
-							("achievements", ""),
-							("achievements-new", secret.achievements.utils.achievements_response(new_achievements)),
-							("onlineScoreId", s.scoreID)
-						])
-					]
-				output = "\n".join(zingonify(x) for x in dicts)
+				# score charts
+				charts_res = [
+					collections.OrderedDict([
+						("beatmapId", beatmapInfo.beatmapID),
+						("beatmapSetId", beatmapInfo.beatmapSetID),
+						("beatmapPlaycount", beatmapInfo.playcount + 1),
+						("beatmapPasscount", beatmapInfo.passcount + (s.completed == 3)),
+						("approvedDate", beatmapInfo.rankingDate)
+					]),
+					BeatmapChart(
+						oldPersonalBest if s.completed == 3 else currentPersonalBest,
+						currentPersonalBest if s.completed == 3 else s,
+						beatmapInfo.beatmapID,
+					),
+					OverallChart(
+						userID, oldUserStats, newUserStats, s, new_achievements, oldRank, rankInfo["currentRank"]
+					)
+				]
+				output = "\n".join(zingonify(x) for x in charts_res)
 
 				# Some debug messages
 				log.debug("Generated output for online ranking screen!")
@@ -598,9 +569,12 @@ class handler(requestsManager.asyncRequestHandler):
 						beatmapInfo.songName.encode().decode("ASCII", "ignore"),
 						gameModes.getGamemodeFull(s.gameMode)
 						)
-								
-					params = urlencode({"k": glob.conf.config["server"]["apikey"], "to": "#announce", "msg": annmsg})
-					requests.get("{}/api/v1/fokabotMessage?{}".format(glob.conf.config["server"]["banchourl"], params))
+
+					# Thread inefficiency go BRRRR.
+					thread.Thread(target=requests.get, args=("{}/api/v1/fokabotMessage?{}".format(
+						glob.conf.config["server"]["banchourl"],
+						urlencode({"k": glob.conf.config["server"]["apikey"], "to": "#announce", "msg": annmsg})
+					)))
 
 					#first places go brrr haha
 					glob.db.execute(f"DELETE FROM first_places WHERE beatmap_md5 = '{s.fileMd5}' AND mode = {s.gameMode} AND relax = {rx_type}")
@@ -655,45 +629,23 @@ class handler(requestsManager.asyncRequestHandler):
 					#around wheer it dies
 					if glob.conf.config["discord"]["enable"]:
 						# First, let's check what mod does the play have
-						ScoreMods = ""
-						if s.mods == 0:
-							ScoreMods += "NM"
-						if s.mods & mods.NOFAIL > 0:
-							ScoreMods += "NF"
-						if s.mods & mods.EASY > 0:
-							ScoreMods += "EZ"
-						if s.mods & mods.HIDDEN > 0:
-							ScoreMods += "HD"
-						if s.mods & mods.HARDROCK > 0:
-							ScoreMods += "HR"
-						if s.mods & mods.DOUBLETIME > 0:
-							ScoreMods += "DT"
-						if s.mods & mods.HALFTIME > 0:
-							ScoreMods += "HT"
-						if s.mods & mods.FLASHLIGHT > 0:
-							ScoreMods += "FL"
-						if s.mods & mods.SPUNOUT > 0:
-							ScoreMods += "SO"
-						if s.mods & mods.TOUCHSCREEN > 0:
-							ScoreMods += "TD"
-						if s.mods & mods.RELAX > 0:
-							ScoreMods += "RX"
-						if s.mods & mods.RELAX2 > 0:
-							ScoreMods += "AP"
+						user_mods = mods_from_enum(s.mods)
 						# Second, get the webhook link from config
 
 						url = glob.conf.config["discord"]["score"]
 
 						# Then post them!
-						webhook = Webhook(url, color=0xadd8e6, footer="This score is submitted on RealistikOsu!")
-						webhook.set_author(name=username.encode().decode("ASCII", "ignore"), icon='https://a.ussr.pl/{}'.format(userID))
+						webhook = Webhook(url, color=0x0f97ff, footer="New top score achieved on RealistikOsu!")
+						webhook.set_author(name=username.encode().decode("ASCII", "ignore"), icon=f'https://a.ussr.pl/{userID}')
 						webhook.set_title(title=f"New score by {username}!")
 						webhook.set_desc("[{}] Achieved #1 on mode **{}**, {} +{}!".format(DAGAyMode, gameModes.getGamemodeFull(s.gameMode), beatmapInfo.songName.encode().decode("ASCII", "ignore"), ScoreMods))
 						webhook.add_field(name='Total: {}pp'.format(float("{0:.2f}".format(s.pp))), value='Gained: +{}pp'.format(float("{0:.2f}".format(ppGained))))
-						webhook.add_field(name='Actual rank: {}'.format(rankInfo["currentRank"]), value='[Download Link](https://osu.gatari.pw/d/{})'.format(beatmapInfo.beatmapSetID))
+						webhook.add_field(name='Actual rank: {}'.format(rankInfo["currentRank"]), value='[Download Link](https://ussr.pl/d/{})'.format(beatmapInfo.beatmapSetID))
 						webhook.add_field(name='Played by: {}'.format(username.encode().decode("ASCII", "ignore")), value="[Go to user's profile](https://ussr.pl/{}u/{})".format(ProfAppend, userID))
 						webhook.set_image('https://assets.ppy.sh/beatmaps/{}/covers/cover.jpg'.format(beatmapInfo.beatmapSetID))
-						webhook.post()
+
+						# Run this in a thread so we dont push our slow score submit even further.
+						threading.Thread(target=webhook.post).start()
 
 				# Write message to client
 				self.write(output)
@@ -734,7 +686,7 @@ class handler(requestsManager.asyncRequestHandler):
 			# We only log through schiavo atm (see exceptions.py).
 			self.set_status(408)
 			self.write("error: pass")
-		except:
+		except Exception: # Dont use bare except kids. 
 			# Try except block to avoid more errors
 			try:
 				log.error("Unknown error in {}!\n```{}\n{}```".format(MODULE_NAME, sys.exc_info(), traceback.format_exc()))
