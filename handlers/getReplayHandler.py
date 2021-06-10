@@ -20,7 +20,7 @@ REPLAY_PATH_BASE = glob.conf.config["server"]["replayspath"] + "{}/replay_{}.osr
 MODULE_NAME = "get_replay"
 
 # Score ID offsets, so that we dont run ridiculous amounts of queries.
-RELAX_OFFSET = 1073963347
+RELAX_OFFSET = 1073741823
 AP_OFFSET = 2000000000
 BASE_QUERY = (
 	"SELECT play_mode, userid FROM scores{} WHERE id = %s LIMIT 1"
@@ -44,7 +44,7 @@ class handler(requestsManager.asyncRequestHandler):
 		
 		# Set variables.
 		username = self.get_argument("u")
-		p_hash = self.get_argument("h")
+		#p_hash = self.get_argument("h")
 		replay_id = int(self.get_argument("c"))
 
 		# Work out scores table from ID.
@@ -69,6 +69,5 @@ class handler(requestsManager.asyncRequestHandler):
 			return self.write("no")
 
 		# We send them le replay.
-		log.info(f"Served {rp_path} to {username}")
-		with open(rp_path, "r") as f:
-			return self.write(f.read())
+		log.info(f"Served {rp_path} to {username}.")
+		with open(rp_path, "r") as f: return self.write(f.read())
