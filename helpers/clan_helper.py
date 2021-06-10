@@ -30,7 +30,7 @@ class ClanCache:
         self._cached_tags.clear()
 
         # Grab all clan memberships from db.
-        clans_db = glob.db.fetchall(
+        clans_db = glob.db.fetchAll(
             "SELECT uc.user AS u, c.tag AS tag FROM user_clans uc "
             "INNER JOIN clans c ON uc.clan = c.id"
         )

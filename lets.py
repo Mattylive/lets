@@ -17,6 +17,7 @@ from distutils.version import LooseVersion
 from constants import rankedStatuses
 from objects import glob
 from helpers import consoleHelper
+from helpers import config
 
 # Read config
 consoleHelper.printNoNl("> Reading config file... ")
@@ -56,10 +57,10 @@ from handlers import submitModularHandler
 from handlers import uploadScreenshotHandler
 from handlers import commentHandler
 from handlers import lastFMHandler
-from helpers import config
 from common import generalUtils
 from common import agpl
 from pubSubHandlers import beatmapUpdateHandler
+from pubSubHandlers import clanCacheRefresh
 import secret.achievements.utils
 
 from helpers.clan_helper import ClanCache
@@ -324,6 +325,7 @@ if __name__ == "__main__":
 		# Connect to pubsub channels
 		pubSub.listener(glob.redis, {
 			"lets:beatmap_updates": beatmapUpdateHandler.handler(),
+			"rosu:clan_update": clanCacheRefresh.handler()
 		}).start()
 
 		# Server start message and console output

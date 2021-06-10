@@ -6,5 +6,5 @@ datadog==0.41.0
 bcrypt==3.2.0
 Cython==0.29.23
 requests==2.25.1
-redis==3.5.3
+redis==2.10.5
 dill==0.3.3

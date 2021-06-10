@@ -14,6 +14,8 @@ from constants import exceptions, rankedStatuses
 from objects import glob
 from common.constants import mods
 from common.sentry import sentry
+# I love benchmarks.
+from helpers.realistikh import Timer
 
 # Custom module go brr
 try:
@@ -32,6 +34,8 @@ class handler(requestsManager.asyncRequestHandler):
 	@tornado.gen.engine
 	@sentry.captureTornado
 	def asyncGet(self):
+		t = Timer()
+		t.start()
 		cdef str ip
 		cdef str md5
 		cdef str fileName
@@ -114,7 +118,6 @@ class handler(requestsManager.asyncRequestHandler):
 
 			# Console output
 			fileNameShort = fileName[:32]+"..." if len(fileName) > 32 else fileName[:-4]
-			log.info("Requested beatmap {} ({})".format(fileNameShort, md5))
 
 			# Create beatmap object and set its data
 			bmap = beatmap.beatmap(md5, beatmapSetID, gameMode, fileName=fileName)
@@ -144,8 +147,8 @@ class handler(requestsManager.asyncRequestHandler):
 
 			# Datadog stats
 			glob.dog.increment(glob.DATADOG_PREFIX+".served_leaderboards")
-		except exceptions.need2FAException:
-			self.write("error: 2fa")
+			t.end()
+			log.info(f"Served leaderboards for {fileNameShort} ({md5}) | {t.time_str()}")
 		except exceptions.invalidArgumentsException:
 			self.write("error: meme")
 		except exceptions.userBannedException:

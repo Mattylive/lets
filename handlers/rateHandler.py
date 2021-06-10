@@ -8,6 +8,13 @@ from common.log import logUtils as log
 from constants import exceptions, rankedStatuses
 from objects import glob
 
+# Custom module go brr
+try:
+	from realistik.user_utils import verify_password
+except ImportError:
+	# Use ripples one.
+	from common.ripple.userUtils import checkLogin as verify_password
+
 MODULE_NAME = "rate"
 
 
@@ -29,10 +36,8 @@ class handler(requestsManager.asyncRequestHandler):
 			checksum = self.get_argument("c").strip()
 			if not user_id:
 				raise exceptions.loginFailedException(MODULE_NAME, user_id)
-			if not userUtils.checkLogin(user_id, password, ip):
+			if not verify_password(user_id, password):
 				raise exceptions.loginFailedException(MODULE_NAME, username)
-			if userUtils.check2FA(user_id, ip):
-				raise exceptions.need2FAException(MODULE_NAME, user_id, ip)
 
 			ranked = glob.db.fetch(
 				"SELECT ranked FROM beatmaps WHERE beatmap_md5 = %s LIMIT 1",

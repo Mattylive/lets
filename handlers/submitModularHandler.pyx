@@ -374,12 +374,7 @@ class handler(requestsManager.asyncRequestHandler):
 			# Hello, I'm Te Exx's fire. (google translate)
 			if s.score < 0 or s.score > (2 ** 63) - 1 and glob.conf.extra["mode"]["anticheat"]:
 				userUtils.ban(userID)
-				userUtils.appendNotes(userID, "Banned due to negative score (score submitter)")
-			elif s.score < 0 or s.score > (2 ** 63) - 1 and not glob.conf.extra["mode"]["anticheat"]:
-				alert = "{}, seems like you've exceed the score limit (INT32) or your score is negative, this score won't submit for you.".format(username.encode().decode("ASCII", "ignore"))
-				params = urlencode({"k": glob.conf.config["server"]["apikey"], "to": username.encode().decode("ASCII", "ignore"), "msg": alert})
-				requests.get("{}/api/v1/fokabotMessage?{}".format(glob.conf.config["server"]["banchourl"], params))
-				return
+				userUtils.appendNotes(userID, "Banned due to impossible play score (score submitter)")
 
 			# Make sure the score is not memed
 			if s.gameMode == gameModes.MANIA and s.score > 1000000:
