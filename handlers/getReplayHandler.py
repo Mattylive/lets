@@ -1,93 +1,74 @@
 import os
-import sys
-import traceback
 
 import tornado.gen
 import tornado.web
-from raven.contrib.tornado import SentryMixin
 
 from common.log import logUtils as log
-from common.ripple import userUtils
 from common.web import requestsManager
-from constants import exceptions
-from objects import glob
 from common.sentry import sentry
+from common.ripple import userUtils
+from objects import glob
+# Custom module go brr
+try:
+	from realistik.user_utils import verify_password
+except ImportError:
+	# Use ripples one.
+	log.warning("Using Ripple pass check!")
+	from common.ripple.userUtils import checkLogin as verify_password
 
+REPLAY_PATH_BASE = glob.conf.config["server"]["replayspath"] + "{}/replay_{}.osr"
 MODULE_NAME = "get_replay"
+
+# Score ID offsets, so that we dont run ridiculous amounts of queries.
+RELAX_OFFSET = 1073963347
+AP_OFFSET = 2000000000
+BASE_QUERY = (
+	"SELECT play_mode, userid FROM scores{} WHERE id = %s LIMIT 1"
+)
+
 class handler(requestsManager.asyncRequestHandler):
-	"""
-	Handler for osu-getreplay.php
+	"""A rewrittten replay handler for RealisitkOsu, without any ridiculous
+	misuse of SQL.
+	
+	Handles `/web/osu-getreplay.php`
 	"""
 	@tornado.web.asynchronous
 	@tornado.gen.engine
 	@sentry.captureTornado
 	def asyncGet(self):
-		try:
-			# OOF
-			UsingRelax = False
+		"""The actual handler."""
 
-			# Get request ip
-			ip = self.getRequestIP()
+		# Argument Verification.
+		if not requestsManager.checkArguments(self.request.arguments, ("u", "h", "c")):
+			return self.write("no")
+		
+		# Set variables.
+		username = self.get_argument("u")
+		p_hash = self.get_argument("h")
+		replay_id = int(self.get_argument("c"))
 
-			# Check arguments
-			if not requestsManager.checkArguments(self.request.arguments, ["c", "u", "h"]):
-				raise exceptions.invalidArgumentsException(MODULE_NAME)
+		# Work out scores table from ID.
+		suffix = ""
+		# Relax replay
+		if RELAX_OFFSET < replay_id < AP_OFFSET: suffix = "_relax"
+		elif replay_id > AP_OFFSET: suffix = "_ap"
 
-			# Get arguments
-			username = self.get_argument("u")
-			password = self.get_argument("h")
-			replayID = self.get_argument("c")
+		# Grab data on the gamer that did this.
+		play_db = glob.db.fetch(
+			BASE_QUERY.format(suffix),
+			(replay_id,)
+		)
 
-			# Login check
-			userID = userUtils.getID(username)
-			if userID == 0:
-				raise exceptions.loginFailedException(MODULE_NAME, userID)
-			if not userUtils.checkLogin(userID, password, ip):
-				raise exceptions.loginFailedException(MODULE_NAME, username)
-			if userUtils.check2FA(userID, ip):
-				raise exceptions.need2FAException(MODULE_NAME, username, ip)
+		if play_db: userUtils.incrementReplaysWatched(
+			play_db["userid"], play_db["play_mode"]
+		)
 
-			# Get user ID
-			replayData = glob.db.fetch("SELECT scores.*, users.username AS uname FROM scores LEFT JOIN users ON scores.userid = users.id WHERE scores.id = %s", [replayID])
-			if replayData == None:
-				replayData = glob.db.fetch("SELECT scores_relax.*, users.username AS uname FROM scores_relax LEFT JOIN users ON scores_relax.userid = users.id WHERE scores_relax.id = %s", [replayID])
-				if replayData == None:
-					replayData = glob.db.fetch("SELECT scores_ap.*, users.username AS uname FROM scores_ap LEFT JOIN users ON scores_ap.userid = users.id WHERE scores_ap.id = %s", [replayID])
-					UsingRelax = False
-					UsingAuto = True
-					fileName = "{}_ap/replay_{}.osr".format(glob.conf.config["server"]["replayspath"], replayID)
-				else:
-					fileName = "{}_relax/replay_{}.osr".format(glob.conf.config["server"]["replayspath"], replayID)
-					UsingRelax = True
-					UsingAuto = False
-			else:
-				UsingRelax = False
-				UsingAuto = False
-				fileName = "{}/replay_{}.osr".format(glob.conf.config["server"]["replayspath"], replayID)
+		rp_path = REPLAY_PATH_BASE.format(suffix, replay_id)
+		if not os.path.exists(rp_path):
+			log.warning(f"Attempted to serve non-existant replay ({rp_path}) to {username}")
+			return self.write("no")
 
-			# Increment 'replays watched by others' if needed
-			if replayData is not None:
-				if username != replayData["uname"]:
-					userUtils.incrementReplaysWatched(replayData["userid"], replayData["play_mode"])
-
-			Play = "VANILLA"
-			if UsingRelax:
-				Play = "RELAX"
-			if UsingAuto:
-				Play = "AUTOPILOT"
-			# Serve replay
-			log.info("[{}] Serving replay_{}.osr".format(Play, replayID))
-
-			if os.path.isfile(fileName):
-				with open(fileName, "rb") as f:
-					fileContent = f.read()
-				self.write(fileContent)
-			else:
-				log.warning("Replay {} doesn't exist".format(replayID))
-				self.write("")
-		except exceptions.invalidArgumentsException:
-			pass
-		except exceptions.need2FAException:
-			pass
-		except exceptions.loginFailedException:
-			pass
+		# We send them le replay.
+		log.info(f"Served {rp_path} to {username}")
+		with open(rp_path, "r") as f:
+			return self.write(f.read())
