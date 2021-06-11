@@ -17,6 +17,7 @@ except ImportError:
 
 MODULE_NAME = "comments"
 
+# TODO: THis also needs a rewrite.....
 class handler(requestsManager.asyncRequestHandler):
 	CLIENT_WHO = {"normal": "", "player": "player", "admin": "bat", "donor": "subscriber"}
 

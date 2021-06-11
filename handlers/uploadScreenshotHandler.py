@@ -58,15 +58,6 @@ class handler(requestsManager.asyncRequestHandler):
 				return self.write("no")
 			glob.redis.set("lets:screenshot:{}".format(userID), 1, 60)
 
-			# Get a random screenshot id
-			#found = False
-			#screenshotID = ""
-			#while not found:
-			#	screenshotID = generalUtils.randomString(8)
-			#	if not os.path.isfile("{}/{}.jpg".format(glob.conf.config["server"]["screenshotspath"], screenshotID)):
-			#		found = True
-
-			
 			while os.path.exists(path := BASE_PATH.format(generalUtils.randomString(8))): pass
 			
 			# Check if the filesize is not ridiculous. Through my checking I

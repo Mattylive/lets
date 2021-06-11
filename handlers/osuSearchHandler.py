@@ -6,6 +6,13 @@ from common.web import requestsManager
 from common.web import cheesegull
 from constants import exceptions
 from common.log import logUtils as log
+from common.ripple import userUtils
+
+try:
+	from realistik.user_utils import verify_password
+except ImportError:
+	# Use ripples one.
+	from common.ripple.userUtils import checkLogin as verify_password
 
 MODULE_NAME = "direct"
 class handler(requestsManager.asyncRequestHandler):
@@ -18,6 +25,13 @@ class handler(requestsManager.asyncRequestHandler):
 	def asyncGet(self):
 		output = ""
 		try:
+			username = self.get_argument("u")
+			password = self.get_argument("h")
+			user_id = userUtils.getID(username)
+
+			if not verify_password(user_id, password):
+				raise exceptions.loginFailedException(MODULE_NAME, username)
+
 			try:
 				# Get arguments
 				gameMode = self.get_argument("m", None)
@@ -54,5 +68,7 @@ class handler(requestsManager.asyncRequestHandler):
 					pass
 		except (exceptions.noAPIDataError, exceptions.invalidArgumentsException):
 			output = "0\n"
+		except exceptions.loginFailedException:
+			output = "error: pass"
 		finally:
 			self.write(output)
