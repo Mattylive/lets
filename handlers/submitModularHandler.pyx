@@ -281,7 +281,7 @@ class handler(requestsManager.asyncRequestHandler):
 			if (not restricted) and not check_verified(userID):
 				rx_pp = glob.conf.extra["lets"]["submit"]["max-rx-pp"]
 				ap_pp = glob.conf.extra["lets"]["submit"]["max-ap-pp"]
-				oof_pp = glob.conf.extra["lets"]["submit"]["max-vanilla-pp"]
+				vn_pp = glob.conf.extra["lets"]["submit"]["max-vanilla-pp"]
 				
 				if UsingRelax and s.pp >= rx_pp and s.gameMode == gameModes.STD: 
 					userUtils.restrict(userID)
@@ -291,7 +291,7 @@ class handler(requestsManager.asyncRequestHandler):
 					userUtils.restrict(userID)
 					userUtils.appendNotes(userID, "Restricted due to breaking the PP cap on autopilot ({}pp)".format(s.pp))
 					log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
-				elif s.pp >= oof_pp and s.gameMode == gameModes.STD and not (UsingAutopilot or UsingRelax):
+				elif s.pp >= vn_pp and s.gameMode == gameModes.STD and not (UsingAutopilot or UsingRelax):
 					userUtils.restrict(userID)
 					userUtils.appendNotes(userID, "Restricted due to breaking the PP cap on vanilla ({}pp)".format(s.pp))
 					log.warning("**{}** ({}) has been restricted due to too high pp gain **({}pp)**".format(username, userID, s.pp), "cm")
@@ -354,7 +354,7 @@ class handler(requestsManager.asyncRequestHandler):
 						if glob.conf.config["discord"]["enable"]:
 							webhook = Webhook(glob.conf.config["discord"]["ahook"],
 											  color=0xadd836,
-											  footer="I SPOT A THOT. [ Client AC ]")
+											  footer="I SPOT A THOT. [ SSAC ]")
 							webhook.set_title(title=f"CHEATER POLICE HERE. WE CAUGHT CHEATERMAN {username} ({userID})")
 							webhook.set_desc(f'DETECTED FLAG {haxFlags}\nIN ENUM: {hack}')
 							webhook.post()
@@ -422,6 +422,8 @@ class handler(requestsManager.asyncRequestHandler):
 			log.debug("Updating {}'s stats...".format(username))
 			# Update personal beatmaps playcount
 			userUtils.incrementUserBeatmapPlaycount(userID, s.gameMode, beatmapInfo.beatmapID)
+
+			# TODO: REWRITE THIS ENTIRE CHUNK. ENTIRE STATS IS SUPER INEFFICIENT.
 			if UsingRelax:
 				userUtils.updateStatsRx(userID, s)
 				userUtils.updateTotalHitsRX(score=s)
@@ -679,10 +681,8 @@ class handler(requestsManager.asyncRequestHandler):
 			# Try except block to avoid more errors
 			try:
 				log.error("Unknown error in {}!\n```{}\n{}```".format(MODULE_NAME, sys.exc_info(), traceback.format_exc()))
-				if glob.sentry:
-					yield tornado.gen.Task(self.captureException, exc_info=True)
-			except:
-				pass
+				if glob.sentry: yield tornado.gen.Task(self.captureException, exc_info=True)
+			except Exception: pass
 
 			# Every other exception returns a 408 error (timeout)
 			# This avoids lost scores due to score server crash

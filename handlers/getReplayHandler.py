@@ -13,7 +13,6 @@ try:
 	from realistik.user_utils import verify_password
 except ImportError:
 	# Use ripples one.
-	log.warning("Using Ripple pass check!")
 	from common.ripple.userUtils import checkLogin as verify_password
 
 REPLAY_PATH_BASE = glob.conf.config["server"]["replayspath"] + "{}/replay_{}.osr"

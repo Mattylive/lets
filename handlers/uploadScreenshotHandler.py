@@ -16,6 +16,14 @@ from common import generalUtils
 from objects import glob
 from common.sentry import sentry
 
+try:
+	from realistik.user_utils import verify_password
+except ImportError:
+	# Use ripples one.
+	from common.ripple.userUtils import checkLogin as verify_password
+
+BASE_PATH = glob.conf.config["server"]["screenshotspath"] + "/{}.jpg"
+
 MODULE_NAME = "screenshot"
 class handler(requestsManager.asyncRequestHandler):
 	"""
@@ -40,10 +48,10 @@ class handler(requestsManager.asyncRequestHandler):
 			password = self.get_argument("p")
 			ip = self.getRequestIP()
 			userID = userUtils.getID(username)
-			if not userUtils.checkLogin(userID, password, ip):
+			if not verify_password(userID, password):
 				raise exceptions.loginFailedException(MODULE_NAME, username)
-			if userUtils.check2FA(userID, ip):
-				raise exceptions.need2FAException(MODULE_NAME, username, ip)
+			if not userUtils.checkBanchoSession(userID, ip):
+				raise exceptions.noBanchoSessionException(MODULE_NAME, username, ip)
 
 			# Rate limit
 			if glob.redis.get("lets:screenshot:{}".format(userID)) is not None:
@@ -51,12 +59,15 @@ class handler(requestsManager.asyncRequestHandler):
 			glob.redis.set("lets:screenshot:{}".format(userID), 1, 60)
 
 			# Get a random screenshot id
-			found = False
-			screenshotID = ""
-			while not found:
-				screenshotID = generalUtils.randomString(8)
-				if not os.path.isfile("{}/{}.jpg".format(glob.conf.config["server"]["screenshotspath"], screenshotID)):
-					found = True
+			#found = False
+			#screenshotID = ""
+			#while not found:
+			#	screenshotID = generalUtils.randomString(8)
+			#	if not os.path.isfile("{}/{}.jpg".format(glob.conf.config["server"]["screenshotspath"], screenshotID)):
+			#		found = True
+
+			
+			while os.path.exists(path := BASE_PATH.format(generalUtils.randomString(8))): pass
 			
 			# Check if the filesize is not ridiculous. Through my checking I
 			# have discovered all screenshots on rosu are below 500kb.
@@ -69,14 +80,16 @@ class handler(requestsManager.asyncRequestHandler):
 				return self.write("unknownfiletype")
 
 			# Write screenshot file to screenshots folder
-			with open("{}/{}.jpg".format(glob.conf.config["server"]["screenshotspath"], screenshotID), "wb") as f:
+			with open(path, "wb") as f:
 				f.write(self.request.files["ss"][0]["body"])
 
 			# Output
-			log.info("New screenshot ({})".format(screenshotID))
+			log.info("New screenshot ({})".format(path))
 
+			# Dirty method.
+			ss_ting = path.removeprefix(glob.conf.config["server"]["screenshotspath"])
 			# Return screenshot link
-			self.write("{}/ss/{}.jpg".format(glob.conf.config["server"]["serverurl"], screenshotID))
+			self.write("{}/ss{}".format(glob.conf.config["server"]["serverurl"], ss_ting))
 		except exceptions.need2FAException:
 			pass
 		except exceptions.invalidArgumentsException:

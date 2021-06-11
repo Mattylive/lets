@@ -8,6 +8,13 @@ from common.web import requestsManager
 from constants import exceptions
 from objects import glob
 
+
+try:
+	from realistik.user_utils import verify_password
+except ImportError:
+	# Use ripples one.
+	from common.ripple.userUtils import checkLogin as verify_password
+
 MODULE_NAME = "comments"
 
 class handler(requestsManager.asyncRequestHandler):
@@ -34,10 +41,10 @@ class handler(requestsManager.asyncRequestHandler):
 			userID = userUtils.getID(username)
 			if userID == 0:
 				raise exceptions.loginFailedException(MODULE_NAME, userID)
-			if not userUtils.checkLogin(userID, password, ip):
+			if not verify_password(userID, password):
 				raise exceptions.loginFailedException(MODULE_NAME, username)
-			if userUtils.check2FA(userID, ip):
-				raise exceptions.need2FAException(MODULE_NAME, userID, ip)
+			if not userUtils.checkBanchoSession(userID, ip):
+				raise exceptions.noBanchoSessionException(MODULE_NAME, username, ip)
 			if userUtils.isBanned(userID):
 				raise exceptions.userBannedException(MODULE_NAME, username)
 

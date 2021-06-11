@@ -12,6 +12,12 @@ from constants import exceptions
 from objects import glob
 from common.sentry import sentry
 
+try:
+	from realistik.user_utils import verify_password
+except ImportError:
+	# Use ripples one.
+	from common.ripple.userUtils import checkLogin as verify_password
+
 MODULE_NAME = "bancho_connect"
 class handler(requestsManager.asyncRequestHandler):
 	"""
@@ -31,14 +37,17 @@ class handler(requestsManager.asyncRequestHandler):
 
 			# Get user ID
 			username = self.get_argument("u")
+			password = self.get_argument("h")
 			userID = userUtils.getID(username)
 			if userID is None:
 				raise exceptions.loginFailedException(MODULE_NAME, username)
 
 			# Check login
 			log.info("{} ({}) wants to connect".format(username, userID))
-			if not userUtils.checkLogin(userID, self.get_argument("h"), ip):
+			if not verify_password(userID, password):
 				raise exceptions.loginFailedException(MODULE_NAME, username)
+			if not userUtils.checkBanchoSession(userID, ip):
+				raise exceptions.noBanchoSessionException(MODULE_NAME, username, ip)
 
 			# Ban check
 			if userUtils.isBanned(userID):
@@ -47,10 +56,6 @@ class handler(requestsManager.asyncRequestHandler):
 			# Lock check
 			if userUtils.isLocked(userID):
 				raise exceptions.userLockedException(MODULE_NAME, username)
-
-			# 2FA check
-			if userUtils.check2FA(userID, ip):
-				raise exceptions.need2FAException(MODULE_NAME, username, ip)
 
 			# Update latest activity
 			userUtils.updateLatestActivity(userID)

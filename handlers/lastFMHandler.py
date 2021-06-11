@@ -7,6 +7,13 @@ from secret.discord_hooks import Webhook
 from objects import glob
 from helpers import generalHelper
 
+try:
+	from realistik.user_utils import verify_password
+except ImportError:
+	# Use ripples one.
+	from common.ripple.userUtils import checkLogin as verify_password
+
+# TODO: Rewrite this....
 MODULE_NAME = "lastFMHandler"
 class handler(requestsManager.asyncRequestHandler):
     """
@@ -34,8 +41,10 @@ class handler(requestsManager.asyncRequestHandler):
         userID = userUtils.getID(username)
         if userID == 0:
             return self.write("error: user is unknown")
-        if not userUtils.checkLogin(userID, password, ip):
-            return self.write("error: this dude is not authorized. BAN!")
+        if not verify_password(userID, password):
+            return self.write("error: youre the bad guy....")
+        if not userUtils.checkBanchoSession(userID, ip):
+            raise self.write("error: what if... we are the bad guys?")
         if not beatmap_ban or beatmap_ban and not beatmap_ban.startswith("a"):
             return self.write("-3")
 
