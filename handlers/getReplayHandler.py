@@ -69,4 +69,4 @@ class handler(requestsManager.asyncRequestHandler):
 
 		# We send them le replay.
 		log.info(f"Served {rp_path} to {username}.")
-		with open(rp_path, "r") as f: return self.write(f.read())
+		with open(rp_path, "rb") as f: return self.write(f.read())
