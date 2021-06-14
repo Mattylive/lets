@@ -39,8 +39,9 @@ class Timer:
     
 def time_str(timer: Timer) -> str:
     """If time is in ms, returns ms value. Else returns rounded seconds value."""
-    if time < 1:
+
+    if t := timer.end() < 1:
         time_str = f"{timer.ms_return()}ms"
     else:
-        time_str = f"{round(time,2)}s"
+        time_str = f"{round(t,2)}s"
     return time_str
