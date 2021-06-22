@@ -9,5 +9,6 @@ class handler(generalPubSubHandler.generalPubSubHandler):
 
 	def handle(self, data):
 		data = super().parseData(data)
+		print(f"Clan Cache: Requested refresh fro user {data}")
 		if data is None: return
 		glob.clan_cache.cache_individual(int(data))
