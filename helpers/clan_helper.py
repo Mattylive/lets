@@ -59,6 +59,9 @@ class ClanCache:
         )
 
         if not clan_db: return # Nothing... Keep it empty and get will just return noen.
+
+        # cache their tag.
+        self._cached_tags[user_id] = clan_db["tag"]
     
     def get(self, user_id: int) -> Union[str, None]:
         """Returns the clan tag for the given user.
