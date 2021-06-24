@@ -7,9 +7,6 @@
 [submodule "pp/oppai-ng"]
 	path = pp/oppai-ng
 	url = https://github.com/Francesco149/oppai-ng.git
-[submodule "pp/oppai-rx"]
-	path = pp/oppai-rx
-	url = https://github.com/light-ripple/akatsuki-pp-relax.git
 [submodule "pp/catch_the_pp"]
 	path = pp/catch_the_pp
 	url = https://github.com/osuthailand/catch-the-pp.git
@@ -17,9 +14,4 @@
 [submodule "pp/oppai-ap"]
 	path = pp/oppai-ap
 	url = https://github.com/RealistikOsu/ap-pp.git
-[submodule "pp/oppai-rx"]
-	path = pp/oppai-rx
-	url = https://github.com/light-ripple/akatsuki-pp-relax.git
-[submodule "realistik"]
-	path = realistik
-	url = https://github.com/RealistikDash/rosu_priv
+
